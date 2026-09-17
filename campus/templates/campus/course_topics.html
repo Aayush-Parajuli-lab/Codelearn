@@ -1,0 +1,24 @@
+{% extends "campus/base.html" %}
+{% block title %}{{ course.title }} topics — CodeLearn{% endblock %}
+{% block page_title %}{{ course.title }}{% endblock %}
+{% block page_subtitle %}<p>Topics and discussions</p>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <table class="table">
+    <thead><tr><th>Topic</th><th>Lessons</th><th>Discussion posts</th><th></th></tr></thead>
+    <tbody>
+      {% for t in topics %}
+      <tr>
+        <td>{{ t.name }}</td>
+        <td class="font-mono">{{ t.lesson_count }}</td>
+        <td class="font-mono">{{ t.post_count }}</td>
+        <td><a href="{% url 'topic_forum' t.id %}" class="btn btn-outline">Open discussion</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" style="color: var(--text-muted);">No topics yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

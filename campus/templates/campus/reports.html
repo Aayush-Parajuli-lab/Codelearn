@@ -1,0 +1,57 @@
+{% extends "campus/base.html" %}
+{% block title %}Reports — CodeLearn{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block page_subtitle %}<p>System-wide performance overview</p>{% endblock %}
+
+{% block topbar_extra %}<a href="{% url 'reports_export' %}" class="btn btn-outline">Export CSV</a>{% endblock %}
+
+{% block content %}
+<div class="grid grid-4" style="margin-bottom: 20px;">
+  <div class="card stat-card">
+    <div class="stat-label">Student-topic records</div>
+    <div class="stat-value">{{ total_features }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Flagged weak (classifier)</div>
+    <div class="stat-value">{{ weak_count }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">% flagged weak</div>
+    <div class="stat-value">{{ weak_pct }}%</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Avg. attendance (all students)</div>
+    <div class="stat-value">{{ avg_attendance|default:"—" }}{% if avg_attendance %}%{% endif %}</div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="section-title">Students by class</div>
+    <table class="table">
+      <thead><tr><th>Class</th><th>Students</th></tr></thead>
+      <tbody>
+        {% for c in by_class %}
+        <tr><td>{{ c }}</td><td class="font-mono">{{ c.student_count }}</td></tr>
+        {% empty %}
+        <tr><td colspan="2" style="color: var(--text-muted);">No classes yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Submissions by status</div>
+    <table class="table">
+      <thead><tr><th>Status</th><th>Count</th></tr></thead>
+      <tbody>
+        {% for row in submission_status_counts %}
+        <tr><td>{{ row.status }}</td><td class="font-mono">{{ row.count }}</td></tr>
+        {% empty %}
+        <tr><td colspan="2" style="color: var(--text-muted);">No submissions yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

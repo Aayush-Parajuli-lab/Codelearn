@@ -1,0 +1,38 @@
+{% extends "campus/base.html" %}
+{% block title %}Courses — CodeLearn{% endblock %}
+{% block page_title %}{% if role == "ADMIN" %}Courses{% else %}My courses{% endif %}{% endblock %}
+
+{% block content %}
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Course</th>
+        <th>Subject</th>
+        {% if role == "ADMIN" %}<th>Teacher</th>{% endif %}
+        <th>Language</th>
+        <th>Students</th>
+        {% if role == "STUDENT" %}<th></th>{% endif %}
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for course in courses %}
+      <tr>
+        <td>{{ course.title }}</td>
+        <td>{{ course.subject.name }}</td>
+        {% if role == "ADMIN" %}<td>{{ course.teacher.user.get_full_name|default:course.teacher.user.username|default:"Unassigned" }}</td>{% endif %}
+        <td><span class="badge badge-neutral font-mono">{{ course.get_programming_language_display }}</span></td>
+        <td class="font-mono">{{ course.student_count }}</td>
+        {% if role == "STUDENT" %}
+          <td><a href="{% url 'certificate_pdf' request.user.student_profile.id course.id %}" class="btn btn-outline">Certificate</a></td>
+        {% endif %}
+        <td><a href="{% url 'course_topics' course.id %}" class="btn btn-outline">Topics</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="color: var(--text-muted);">No courses to show.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

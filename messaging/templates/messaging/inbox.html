@@ -1,0 +1,25 @@
+{% extends "campus/base.html" %}
+{% block title %}Messages — CodeLearn{% endblock %}
+{% block page_title %}Messages{% endblock %}
+{% block topbar_extra %}
+<div style="display:flex; gap:10px;">
+  {% if has_unread %}
+    <form method="post" action="{% url 'mark_all_read' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline">Mark all as read</button>
+    </form>
+  {% endif %}
+  <a href="{% url 'conversation_start' %}" class="btn btn-primary">New message</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="chat-shell">
+  {% include "messaging/_conversation_list.html" %}
+  <div class="chat-main">
+    <div class="chat-main-empty">
+      Select a conversation from the left, or start a new one.
+    </div>
+  </div>
+</div>
+{% endblock %}

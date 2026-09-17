@@ -1,0 +1,29 @@
+{% extends "campus/base.html" %}
+{% block title %}My children — CodeLearn{% endblock %}
+{% block page_title %}My children{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  {% for row in rows %}
+  <div class="card">
+    <div class="section-title">{{ row.student.user.get_full_name|default:row.student.user.username }}</div>
+    <p class="row-sub" style="margin-top:-8px; margin-bottom: 14px;">{{ row.student.school_class|default:"No class assigned" }} &middot; Roll {{ row.student.roll_number }}</p>
+    <div style="display:flex; gap: 24px;">
+      <div>
+        <div class="row-sub">Average score</div>
+        <div class="font-display" style="font-size:22px; font-weight:600;">{{ row.avg_score|default:"—" }}{% if row.avg_score %}%{% endif %}</div>
+      </div>
+      <div>
+        <div class="row-sub">Attendance</div>
+        <div class="font-display" style="font-size:22px; font-weight:600;">{{ row.attendance_pct }}%</div>
+      </div>
+    </div>
+    <div style="margin-top: 14px;">
+      <a href="{% url 'dashboard' %}?child={{ row.student.id }}" class="btn btn-outline">View dashboard</a>
+    </div>
+  </div>
+  {% empty %}
+  <div class="card"><p style="color: var(--text-muted);">No children are linked to this account yet.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "campus/base.html" %}
+{% block title %}Calendar — CodeLearn{% endblock %}
+{% block page_title %}{{ current_month_name }}{% endblock %}
+{% block page_subtitle %}<p>Assignment deadlines and quiz due dates</p>{% endblock %}
+
+{% block topbar_extra %}
+<div style="display:flex; gap:8px; align-items:center;">
+  {% if children|length > 1 %}
+    {% for c in children %}
+      <a href="?child={{ c.id }}&year={{ current_year }}&month={{ current_month }}" class="btn {% if c == child %}btn-primary{% else %}btn-outline{% endif %}">{{ c.user.get_full_name|default:c.user.username }}</a>
+    {% endfor %}
+  {% endif %}
+  <a href="?year={{ prev_year }}&month={{ prev_month }}{% if child %}&child={{ child.id }}{% endif %}" class="btn btn-outline">‹ Prev</a>
+  <a href="?year={{ next_year }}&month={{ next_month }}{% if child %}&child={{ child.id }}{% endif %}" class="btn btn-outline">Next ›</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="padding: 0; overflow: hidden;">
+  <table class="table" style="table-layout: fixed;">
+    <thead>
+      <tr>
+        <th style="text-align:center;">Sun</th><th style="text-align:center;">Mon</th><th style="text-align:center;">Tue</th>
+        <th style="text-align:center;">Wed</th><th style="text-align:center;">Thu</th><th style="text-align:center;">Fri</th><th style="text-align:center;">Sat</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for week in weeks %}
+      <tr>
+        {% for day in week %}
+        <td style="vertical-align:top; height: 96px; {% if not day.in_month %}background: var(--paper-dim);{% endif %} {% if day.is_today %}background: var(--primary-dim);{% endif %}">
+          <div class="font-mono" style="font-size: 12px; color: {% if not day.in_month %}var(--text-muted){% else %}var(--text){% endif %}; margin-bottom: 4px;">
+            {{ day.date.day }}
+          </div>
+          {% for event in day.events|slice:":3" %}
+            <a href="{{ event.url }}" class="badge {% if event.kind == 'assignment' %}badge-warn{% else %}badge-neutral{% endif %}" style="display:block; text-decoration:none; margin-bottom:3px; font-size:10.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              {{ event.title }}
+            </a>
+          {% endfor %}
+          {% if day.events|length > 3 %}
+            <div class="row-sub" style="font-size:10.5px;">+{{ day.events|length|add:"-3" }} more</div>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card" style="margin-top: 16px;">
+  <div class="section-title">This month, in order</div>
+  <div class="row-list">
+    {% for week in weeks %}
+      {% for day in week %}
+        {% if day.in_month and day.events %}
+          <div class="row-item">
+            <span class="row-sub font-mono" style="width:90px; flex-shrink:0;">{{ day.date|date:"M j" }}</span>
+            <div style="flex:1; display:flex; flex-wrap:wrap; gap:6px;">
+              {% for event in day.events %}
+                <a href="{{ event.url }}" class="badge {% if event.kind == 'assignment' %}badge-warn{% else %}badge-neutral{% endif %}" style="text-decoration:none;">
+                  {{ event.title }}
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

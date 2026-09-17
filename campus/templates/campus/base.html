@@ -1,0 +1,78 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="{% if request.user.theme_preference == 'DARK' %}dark{% elif request.user.theme_preference == 'LIGHT' %}light{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}CodeLearn{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/codelearn.css' %}">
+  <script>
+    // If the user hasn't set an explicit Light/Dark preference (theme_preference
+    // is SYSTEM, or they aren't logged in yet), follow the OS setting instead.
+    // Runs before paint so there's no flash of the wrong theme.
+    (function () {
+      var html = document.documentElement;
+      if (!html.getAttribute('data-theme')) {
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        html.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      }
+    })();
+  </script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="sidebar-mark">&lt;/&gt;</div>
+        <div>
+          <div class="sidebar-title">CodeLearn</div>
+          <div class="sidebar-role">{{ request.user.get_role_display }}</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        {% for item in nav_items %}
+          <a href="{{ item.url }}" class="sidebar-link {% if item.active %}active{% endif %}">
+            <span>{{ item.label }}</span>
+            {% if item.badge %}<span class="nav-badge">{{ item.badge }}</span>{% endif %}
+          </a>
+        {% endfor %}
+      </nav>
+
+      <div class="sidebar-foot">
+        {{ request.user.get_full_name|default:request.user.username }}<br>
+        <a href="{% url 'account_settings' %}" style="color: var(--text-on-ink-muted);">⚙ Settings</a>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+          {% block page_subtitle %}<p>{% now "l, F j, Y" %}</p>{% endblock %}
+        </div>
+        <div style="display:flex; align-items:center; gap:14px;">
+          {% block topbar_extra %}{% endblock %}
+          <a href="{% url 'notification_list' %}" class="notif-bell" title="Notifications">
+            🔔
+            {% if unread_notification_count %}<span class="nav-badge notif-bell-badge">{{ unread_notification_count }}</span>{% endif %}
+          </a>
+        </div>
+      </div>
+      <div class="content">
+        {% if messages %}
+          {% for message in messages %}
+            <div class="card" style="margin-bottom: 16px; border-color: {% if message.tags == 'success' %}var(--pass){% elif message.tags == 'error' %}var(--fail){% else %}var(--line){% endif %}; background: {% if message.tags == 'success' %}var(--pass-dim){% elif message.tags == 'error' %}var(--fail-dim){% else %}var(--surface){% endif %};">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </div>
+</body>
+</html>

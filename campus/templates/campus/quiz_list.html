@@ -1,0 +1,40 @@
+{% extends "campus/base.html" %}
+{% block title %}Quizzes — CodeLearn{% endblock %}
+{% block page_title %}Quizzes{% endblock %}
+
+{% block content %}
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Quiz</th><th>Course</th><th>Time limit</th><th>Result</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.quiz.title }}</td>
+        <td class="row-sub">{{ row.quiz.topic.course.title }} &middot; {{ row.quiz.topic.name }}</td>
+        <td class="font-mono">{{ row.quiz.time_limit_minutes }} min</td>
+        <td>
+          {% if row.attempt %}
+            <span class="badge {% if row.attempt.percentage >= 50 %}badge-pass{% else %}badge-warn{% endif %}">
+              {{ row.attempt.percentage|floatformat:0 }}%
+            </span>
+          {% else %}
+            <span class="badge badge-neutral">Not attempted</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if row.attempt %}
+            <a href="{% url 'quiz_result' row.attempt.pk %}" class="btn btn-outline">View result</a>
+          {% else %}
+            <a href="{% url 'quiz_take' row.quiz.pk %}" class="btn btn-primary">Start quiz</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="color: var(--text-muted);">No quizzes available yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

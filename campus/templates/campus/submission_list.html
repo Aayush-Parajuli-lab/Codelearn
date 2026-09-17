@@ -1,0 +1,44 @@
+{% extends "campus/base.html" %}
+{% block title %}Submissions — CodeLearn{% endblock %}
+{% block page_title %}Submissions{% endblock %}
+{% block page_subtitle %}<p>{{ total_count }} submission{{ total_count|pluralize }}</p>{% endblock %}
+
+{% block content %}
+<form method="get" style="display:flex; gap:10px; margin-bottom: 14px; max-width: 520px;">
+  <input type="text" name="q" class="field-input" style="margin-bottom:0; flex:1;" placeholder="Search by student or assignment…" value="{{ query }}">
+  <select name="status" class="field-input" style="margin-bottom:0; width: 170px;" onchange="this.form.submit()">
+    <option value="">All statuses</option>
+    {% for value, label in status_choices %}
+      <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-outline">Search</button>
+</form>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Student</th><th>Assignment</th><th>Status</th><th>Score</th><th>Submitted</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for s in submissions %}
+      <tr>
+        <td>{{ s.student.user.get_full_name|default:s.student.user.username }}</td>
+        <td>{{ s.assignment.title }}</td>
+        <td>
+          <span class="badge {% if s.status == 'PASSED' %}badge-pass{% elif s.status == 'FAILED' or s.status == 'ERROR' %}badge-fail{% else %}badge-warn{% endif %}">
+            {{ s.get_status_display }}
+          </span>
+        </td>
+        <td class="font-mono">{{ s.score }}%</td>
+        <td class="row-sub">{{ s.submitted_at|date:"M j, g:i A" }}</td>
+        <td><a href="{% url 'submission_detail' s.pk %}" class="btn btn-outline">Details</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="color: var(--text-muted);">{% if query or status %}No submissions match your filters.{% else %}No submissions yet.{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "campus/_pagination.html" %}
+</div>
+{% endblock %}

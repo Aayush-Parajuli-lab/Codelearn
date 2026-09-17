@@ -1,0 +1,64 @@
+{% extends "campus/base.html" %}
+{% block title %}{{ display_name }} — CodeLearn{% endblock %}
+{% block page_title %}Messages{% endblock %}
+{% block topbar_extra %}
+<div style="display:flex; gap:10px;">
+  {% if has_unread %}
+    <form method="post" action="{% url 'mark_all_read' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline">Mark all as read</button>
+    </form>
+  {% endif %}
+  <a href="{% url 'conversation_start' %}" class="btn btn-primary">New message</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="chat-shell has-active">
+  {% include "messaging/_conversation_list.html" %}
+
+  <div class="chat-main">
+    <div class="chat-header">
+      <a href="{% url 'inbox' %}" class="chat-back-link" title="Back to chats">‹</a>
+      {% if conversation.is_group %}
+        <div class="chat-avatar chat-avatar-group chat-avatar-sm">{{ display_name|slice:":2"|upper }}</div>
+      {% else %}
+        <div class="chat-avatar chat-avatar-sm" style="background: {{ header_avatar.color }};">{{ header_avatar.initials }}</div>
+      {% endif %}
+      <div>
+        <div class="chat-header-name">{{ display_name }}</div>
+        {% if conversation.is_group %}
+          <div class="chat-header-sub">{{ participants|length|add:1 }} participants</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="chat-thread" id="thread">
+      {% for entry in messages_with_avatars %}
+        <div class="chat-bubble-row {% if entry.is_mine %}mine{% else %}theirs{% endif %}">
+          {% if not entry.is_mine and conversation.is_group %}
+            <div class="chat-avatar chat-avatar-sm" style="background: {{ entry.avatar.color }};">{{ entry.avatar.initials }}</div>
+          {% endif %}
+          <div class="chat-bubble">{{ entry.message.body }}</div>
+        </div>
+        <div class="chat-bubble-meta {% if entry.is_mine %}mine{% endif %}" style="{% if entry.is_mine %}text-align:right;{% else %}margin-left: 38px;{% endif %}">
+          {% if conversation.is_group and not entry.is_mine %}{{ entry.message.sender.get_full_name|default:entry.message.sender.username }} &middot; {% endif %}{{ entry.message.created_at|date:"g:i A" }}
+        </div>
+      {% empty %}
+        <div class="chat-main-empty">No messages yet — say hello 👋</div>
+      {% endfor %}
+    </div>
+
+    <form method="post" class="chat-input-bar">
+      {% csrf_token %}
+      <input type="text" name="body" placeholder="Message…" autocomplete="off" autofocus required>
+      <button type="submit" class="chat-send-btn" title="Send">➤</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const thread = document.getElementById('thread');
+  thread.scrollTop = thread.scrollHeight;
+</script>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "campus/base.html" %}
+{% block title %}Academic performance — CodeLearn{% endblock %}
+{% block page_title %}Academic performance{% endblock %}
+
+{% block topbar_extra %}
+<div style="display:flex; gap:8px; align-items:center;">
+  {% for c in children %}
+    <a href="?child={{ c.id }}" class="btn {% if c == child %}btn-primary{% else %}btn-outline{% endif %}">{{ c.user.get_full_name|default:c.user.username }}</a>
+  {% endfor %}
+  {% if child %}
+    <a href="{% url 'report_card_pdf' child.id %}" class="btn btn-outline">Download report card</a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+{% if not child %}
+  <div class="card"><p style="color: var(--text-muted);">No children are linked to this account yet.</p></div>
+{% else %}
+<div class="card">
+  <div class="section-title">{{ child.user.get_full_name|default:child.user.username }}'s progress by topic</div>
+  <table class="table">
+    <thead>
+      <tr><th>Topic</th><th>Course</th><th>Quiz</th><th>Assignment</th><th>Coding</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for f in features %}
+      <tr>
+        <td>{{ f.topic.name }}</td>
+        <td class="row-sub">{{ f.topic.course.title }}</td>
+        <td class="font-mono">{{ f.quiz_score|floatformat:0 }}%</td>
+        <td class="font-mono">{{ f.assignment_score|floatformat:0 }}%</td>
+        <td class="font-mono">{{ f.coding_score|floatformat:0 }}%</td>
+        <td>
+          {% if f.is_weak == True %}
+            <span class="badge badge-warn">Needs support</span>
+          {% elif f.is_weak == False %}
+            <span class="badge badge-pass">On track</span>
+          {% else %}
+            <span class="badge badge-neutral">Not yet scored</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="color: var(--text-muted);">No progress data yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

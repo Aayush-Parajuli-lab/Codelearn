@@ -1,0 +1,100 @@
+{% extends "campus/base.html" %}
+{% block title %}My dashboard — CodeLearn{% endblock %}
+{% block page_title %}Your dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-4" style="margin-bottom: 20px;">
+  <div class="card stat-card">
+    <div class="stat-label">Courses enrolled</div>
+    <div class="stat-value">{{ courses_enrolled }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Assignments submitted</div>
+    <div class="stat-value">{{ assignments_done }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Average score</div>
+    <div class="stat-value">{{ average_score }}%</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Attendance</div>
+    <div class="stat-value">{{ attendance_pct }}%</div>
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-bottom: 16px;">
+  <div class="card">
+    <div class="section-title">Progress by topic</div>
+    <div class="row-list">
+      {% for f in topic_features %}
+      <div class="row-item" style="display:block;">
+        <div style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+          <span class="row-title">{{ f.topic.name }}</span>
+          <span class="row-sub font-mono">{{ f.coding_score|floatformat:0 }}%</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill {% if f.is_weak %}warn{% else %}pass{% endif %}" style="width: {{ f.coding_score|floatformat:0 }}%;"></div>
+        </div>
+      </div>
+      {% empty %}
+      <p style="color: var(--text-muted); font-size: 13.5px;">Complete an assignment to see your progress here.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Recommended for you</div>
+    <div class="row-list">
+      {% for r in recommendations %}
+      <div class="row-item">
+        <div>
+          <div class="row-title">{{ r.recommended_lesson.title|default:"Practice exercise" }}</div>
+          <div class="row-sub">{{ r.topic.name }} &middot; {{ r.reason }}</div>
+        </div>
+        <a href="#" class="btn btn-outline">Continue</a>
+      </div>
+      {% empty %}
+      <p style="color: var(--text-muted); font-size: 13.5px;">No recommendations right now — keep up the good work.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="section-title">Recent submissions</div>
+    <div class="row-list">
+      {% for s in recent_submissions %}
+      <div class="row-item">
+        <div>
+          <div class="row-title">{{ s.assignment.title }}</div>
+          <div class="row-sub">{{ s.passed_test_cases }}/{{ s.total_test_cases }} test cases passed</div>
+        </div>
+        <span class="badge {% if s.status == 'PASSED' %}badge-pass{% elif s.status == 'FAILED' or s.status == 'ERROR' %}badge-fail{% else %}badge-warn{% endif %}">
+          {{ s.get_status_display }}
+        </span>
+      </div>
+      {% empty %}
+      <p style="color: var(--text-muted); font-size: 13.5px;">You haven't submitted anything yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Upcoming deadlines</div>
+    <div class="row-list">
+      {% for a in upcoming_assignments %}
+      <div class="row-item">
+        <div>
+          <div class="row-title">{{ a.title }}</div>
+          <div class="row-sub">{{ a.topic.course.title }}</div>
+        </div>
+        <span class="row-sub font-mono">{{ a.deadline|date:"M j, Y" }}</span>
+      </div>
+      {% empty %}
+      <p style="color: var(--text-muted); font-size: 13.5px;">Nothing due soon.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

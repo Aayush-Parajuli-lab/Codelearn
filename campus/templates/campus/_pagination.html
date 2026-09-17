@@ -1,0 +1,20 @@
+{% if page_obj.paginator.num_pages > 1 %}
+<div style="display:flex; align-items:center; justify-content:space-between; padding: 14px 4px 4px;">
+  <span class="row-sub">
+    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    &middot; {{ page_obj.paginator.count }} total
+  </span>
+  <div style="display:flex; gap:8px;">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if extra_qs %}&{{ extra_qs }}{% endif %}" class="btn btn-outline">‹ Prev</a>
+    {% else %}
+      <span class="btn btn-outline" style="opacity:0.4; pointer-events:none;">‹ Prev</span>
+    {% endif %}
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if extra_qs %}&{{ extra_qs }}{% endif %}" class="btn btn-outline">Next ›</a>
+    {% else %}
+      <span class="btn btn-outline" style="opacity:0.4; pointer-events:none;">Next ›</span>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

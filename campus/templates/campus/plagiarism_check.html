@@ -1,0 +1,43 @@
+{% extends "campus/base.html" %}
+{% block title %}Plagiarism check — {{ assignment.title }} — CodeLearn{% endblock %}
+{% block page_title %}Plagiarism check{% endblock %}
+{% block page_subtitle %}<p>{{ assignment.title }} &middot; comparing each student's latest submission</p>{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 16px;">
+  <p style="font-size: 13.5px; color: var(--text-muted); margin: 0;">
+    Pairs below scored 75% or higher on token-level similarity — this is a
+    starting point for review, not a verdict. Short or simple assignments
+    can legitimately produce near-identical solutions.
+  </p>
+</div>
+
+{% for pair in pairs %}
+<div class="card" style="margin-bottom: 16px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+    <div class="section-title" style="margin:0;">
+      {{ pair.submission_a.student.user.get_full_name|default:pair.submission_a.student.user.username }}
+      &nbsp;vs&nbsp;
+      {{ pair.submission_b.student.user.get_full_name|default:pair.submission_b.student.user.username }}
+    </div>
+    <span class="badge {% if pair.score >= 0.9 %}badge-fail{% else %}badge-warn{% endif %}">
+      {{ pair.score|floatformat:0 }}0% similar
+    </span>
+  </div>
+  <div class="grid grid-2">
+    <div>
+      <div class="row-sub" style="margin-bottom:6px;">{{ pair.submission_a.student.user.get_full_name|default:pair.submission_a.student.user.username }} — attempt #{{ pair.submission_a.attempt_number }}</div>
+      <pre class="font-mono" style="background: var(--paper-dim); padding: 12px 14px; border-radius: var(--radius); font-size: 12.5px; overflow-x:auto; max-height: 260px;">{{ pair.submission_a.source_code }}</pre>
+    </div>
+    <div>
+      <div class="row-sub" style="margin-bottom:6px;">{{ pair.submission_b.student.user.get_full_name|default:pair.submission_b.student.user.username }} — attempt #{{ pair.submission_b.attempt_number }}</div>
+      <pre class="font-mono" style="background: var(--paper-dim); padding: 12px 14px; border-radius: var(--radius); font-size: 12.5px; overflow-x:auto; max-height: 260px;">{{ pair.submission_b.source_code }}</pre>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="card">
+  <p style="color: var(--text-muted); margin:0;">No suspiciously similar submissions found for this assignment.</p>
+</div>
+{% endfor %}
+{% endblock %}

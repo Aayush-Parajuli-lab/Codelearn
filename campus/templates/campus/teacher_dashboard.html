@@ -1,0 +1,88 @@
+{% extends "campus/base.html" %}
+{% block title %}Teacher dashboard — CodeLearn{% endblock %}
+{% block page_title %}Teacher dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-4" style="margin-bottom: 20px;">
+  <div class="card stat-card">
+    <div class="stat-label">My courses</div>
+    <div class="stat-value">{{ my_courses_count }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Students</div>
+    <div class="stat-value">{{ my_students_count }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Pending submissions</div>
+    <div class="stat-value">{{ pending_submissions }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Upcoming deadlines</div>
+    <div class="stat-value">{{ upcoming_assignments|length }}</div>
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-bottom: 16px;">
+  <div class="card">
+    <div class="section-title">Recent submissions</div>
+    <div class="row-list">
+      {% for s in recent_submissions %}
+      <div class="row-item">
+        <div>
+          <div class="row-title">{{ s.student.user.get_full_name|default:s.student.user.username }}</div>
+          <div class="row-sub">{{ s.assignment.title }} &middot; {{ s.passed_test_cases }}/{{ s.total_test_cases }} passed</div>
+        </div>
+        <span class="badge {% if s.status == 'PASSED' %}badge-pass{% elif s.status == 'FAILED' or s.status == 'ERROR' %}badge-fail{% else %}badge-warn{% endif %}">
+          {{ s.get_status_display }}
+        </span>
+      </div>
+      {% empty %}
+      <p style="color: var(--text-muted); font-size: 13.5px;">No submissions yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Upcoming deadlines</div>
+    <div class="row-list">
+      {% for a in upcoming_assignments %}
+      <div class="row-item">
+        <div>
+          <div class="row-title">{{ a.title }}</div>
+          <div class="row-sub">{{ a.topic.course.title }}</div>
+        </div>
+        <span class="row-sub font-mono">{{ a.deadline|date:"M j, Y" }}</span>
+      </div>
+      {% empty %}
+      <p style="color: var(--text-muted); font-size: 13.5px;">Nothing due soon.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">Students who may need support</div>
+  <p style="color: var(--text-muted); font-size: 13px; margin-top: -8px; margin-bottom: 14px;">
+    Flagged by the weak-topic classifier based on quiz, assignment, coding, and attendance data.
+  </p>
+  <table class="table">
+    <thead><tr><th>Student</th><th>Topic</th><th>Confidence</th></tr></thead>
+    <tbody>
+      {% for f in weak_topic_alerts %}
+      <tr>
+        <td>{{ f.student.user.get_full_name|default:f.student.user.username }}</td>
+        <td>{{ f.topic.name }}</td>
+        <td>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="bar-track" style="width:100px;"><div class="bar-fill warn" style="width:{{ f.weak_probability|floatformat:2|default:0 }}00%;"></div></div>
+            <span class="font-mono" style="font-size:12.5px;">{{ f.weak_probability|floatformat:2 }}</span>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" style="color: var(--text-muted);">No students currently flagged. Run the classifier to refresh this list.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

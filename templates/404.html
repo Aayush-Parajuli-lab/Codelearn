@@ -1,0 +1,30 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page not found — CodeLearn</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/codelearn.css' %}">
+  <script>
+    (function () {
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    })();
+  </script>
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card" style="text-align:center;">
+      <div style="width:44px; height:44px; border:1.5px solid var(--text); border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:16px; margin: 0 auto 18px;">&lt;/&gt;</div>
+      <div class="font-display" style="font-size:40px; font-weight:700; line-height:1;">404</div>
+      <p style="color: var(--text-muted); margin: 10px 0 22px; font-size:14px;">
+        That page doesn't exist, or you don't have access to it.
+      </p>
+      <a href="{% url 'dashboard' %}" class="btn btn-primary" style="justify-content:center;">Back to dashboard</a>
+    </div>
+  </div>
+</body>
+</html>

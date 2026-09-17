@@ -1,0 +1,67 @@
+{% extends "campus/base.html" %}
+{% block title %}Bulk import users — CodeLearn{% endblock %}
+{% block page_title %}Bulk import users{% endblock %}
+{% block page_subtitle %}<p>Create many accounts at once from a CSV file</p>{% endblock %}
+{% block topbar_extra %}<a href="{% url 'user_create' %}" class="btn btn-outline">Add one user instead</a>{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 640px; margin-bottom: 16px;">
+  <div class="section-title">CSV format</div>
+  <p style="font-size: 13.5px; color: var(--text-muted); margin-top: -6px;">
+    First row must be a header with these column names (order doesn't matter).
+    Leave a cell blank if it doesn't apply to that row's role.
+  </p>
+  <table class="table" style="margin-bottom: 16px;">
+    <thead><tr><th>Column</th><th>Used by</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="font-mono">role</td><td>All</td><td>ADMIN / TEACHER / STUDENT / PARENT</td></tr>
+      <tr><td class="font-mono">username</td><td>All</td><td>Must be unique</td></tr>
+      <tr><td class="font-mono">first_name</td><td>All</td><td>Required</td></tr>
+      <tr><td class="font-mono">last_name</td><td>All</td><td>Optional</td></tr>
+      <tr><td class="font-mono">email</td><td>All</td><td>Optional</td></tr>
+      <tr><td class="font-mono">phone_number</td><td>All</td><td>Optional</td></tr>
+      <tr><td class="font-mono">password</td><td>All</td><td>Blank = auto-generated</td></tr>
+      <tr><td class="font-mono">employee_id</td><td>Teacher</td><td>Required for teachers</td></tr>
+      <tr><td class="font-mono">department</td><td>Teacher</td><td>Optional</td></tr>
+      <tr><td class="font-mono">roll_number</td><td>Student</td><td>Required for students</td></tr>
+      <tr><td class="font-mono">school_class</td><td>Student</td><td>Matched by class name</td></tr>
+      <tr><td class="font-mono">occupation</td><td>Parent</td><td>Optional</td></tr>
+      <tr><td class="font-mono">children</td><td>Parent</td><td>Semicolon-separated roll numbers</td></tr>
+    </tbody>
+  </table>
+  <a href="{% url 'user_import_template' %}" class="btn btn-outline">Download sample template</a>
+</div>
+
+<div class="card" style="max-width: 640px;">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label class="field-label" for="id_csv_file">CSV file</label>
+    {{ form.csv_file }}
+    {% if form.csv_file.errors %}
+      <p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ form.csv_file.errors|join:", " }}</p>
+    {% endif %}
+    <button type="submit" class="btn btn-primary">Import</button>
+  </form>
+</div>
+
+{% if results %}
+<div class="card" style="max-width: 640px; margin-top: 16px;">
+  <div class="section-title">Results</div>
+  <table class="table">
+    <thead><tr><th>Row</th><th>Username</th><th>Result</th></tr></thead>
+    <tbody>
+      {% for r in results %}
+      <tr>
+        <td class="font-mono">{{ r.row }}</td>
+        <td>{{ r.username|default:"—" }}</td>
+        <td>
+          <span class="badge {% if r.ok %}badge-pass{% else %}badge-fail{% endif %}">{{ r.ok|yesno:"OK,Error" }}</span>
+          <span class="row-sub">{{ r.message }}</span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

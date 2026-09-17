@@ -1,0 +1,102 @@
+{% extends "campus/base.html" %}
+{% block title %}Add user — CodeLearn{% endblock %}
+{% block page_title %}Add a user{% endblock %}
+{% block page_subtitle %}<p>Create an Admin, Teacher, Student, or Parent account</p>{% endblock %}
+{% block topbar_extra %}<a href="{% url 'user_import' %}" class="btn btn-outline">Bulk import (CSV)</a>{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 640px;">
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <label class="field-label" for="id_role">Role</label>
+    <select name="role" id="id_role" class="field-input" onchange="onRoleChange()">
+      {% for value, label in form.fields.role.choices %}
+        <option value="{{ value }}" {% if form.role.value == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    {% if form.role.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ form.role.errors|join:", " }}</p>{% endif %}
+
+    <div class="grid grid-2" style="gap: 12px;">
+      <div>
+        <label class="field-label" for="id_first_name">First name</label>
+        <input class="field-input" type="text" name="first_name" id="id_first_name" value="{{ form.first_name.value|default:'' }}" required>
+      </div>
+      <div>
+        <label class="field-label" for="id_last_name">Last name</label>
+        <input class="field-input" type="text" name="last_name" id="id_last_name" value="{{ form.last_name.value|default:'' }}">
+      </div>
+    </div>
+    {% if form.first_name.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ form.first_name.errors|join:", " }}</p>{% endif %}
+
+    <label class="field-label" for="id_username">Username</label>
+    <input class="field-input" type="text" name="username" id="id_username" value="{{ form.username.value|default:'' }}" required>
+    {% if form.username.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ form.username.errors|join:", " }}</p>{% endif %}
+
+    <div class="grid grid-2" style="gap: 12px;">
+      <div>
+        <label class="field-label" for="id_email">Email</label>
+        <input class="field-input" type="email" name="email" id="id_email" value="{{ form.email.value|default:'' }}">
+      </div>
+      <div>
+        <label class="field-label" for="id_phone_number">Phone number</label>
+        <input class="field-input" type="text" name="phone_number" id="id_phone_number" value="{{ form.phone_number.value|default:'' }}">
+      </div>
+    </div>
+
+    <label class="field-label" for="id_password">Password</label>
+    <input class="field-input" type="text" name="password" id="id_password" placeholder="Leave blank to auto-generate">
+    {% if form.password.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ form.password.errors|join:", " }}</p>{% endif %}
+
+    <!-- Teacher fields -->
+    <div id="fields-teacher" class="role-fields">
+      <label class="field-label" for="id_employee_id">Employee ID</label>
+      <input class="field-input" type="text" name="employee_id" id="id_employee_id" value="{{ form.employee_id.value|default:'' }}">
+      {% if form.employee_id.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ form.employee_id.errors|join:", " }}</p>{% endif %}
+
+      <label class="field-label" for="id_department">Department</label>
+      <input class="field-input" type="text" name="department" id="id_department" value="{{ form.department.value|default:'' }}">
+    </div>
+
+    <!-- Student fields -->
+    <div id="fields-student" class="role-fields">
+      <label class="field-label" for="id_roll_number">Roll number</label>
+      <input class="field-input" type="text" name="roll_number" id="id_roll_number" value="{{ form.roll_number.value|default:'' }}">
+      {% if form.roll_number.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ form.roll_number.errors|join:", " }}</p>{% endif %}
+
+      <label class="field-label" for="id_school_class">Class</label>
+      <select name="school_class" id="id_school_class" class="field-input">
+        <option value="">— None —</option>
+        {% for c in form.fields.school_class.queryset %}
+          <option value="{{ c.id }}">{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Parent fields -->
+    <div id="fields-parent" class="role-fields">
+      <label class="field-label" for="id_occupation">Occupation</label>
+      <input class="field-input" type="text" name="occupation" id="id_occupation" value="{{ form.occupation.value|default:'' }}">
+
+      <label class="field-label" for="id_children">Children (hold Ctrl/Cmd to select multiple)</label>
+      <select name="children" id="id_children" class="field-input" multiple size="5" style="height: auto;">
+        {% for s in form.fields.children.queryset %}
+          <option value="{{ s.id }}">{{ s.user.get_full_name|default:s.user.username }} ({{ s.roll_number }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Create account</button>
+  </form>
+</div>
+
+<script>
+  function onRoleChange() {
+    const role = document.getElementById('id_role').value;
+    document.getElementById('fields-teacher').style.display = role === 'TEACHER' ? 'block' : 'none';
+    document.getElementById('fields-student').style.display = role === 'STUDENT' ? 'block' : 'none';
+    document.getElementById('fields-parent').style.display = role === 'PARENT' ? 'block' : 'none';
+  }
+  onRoleChange();
+</script>
+{% endblock %}

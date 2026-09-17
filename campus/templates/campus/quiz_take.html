@@ -1,0 +1,41 @@
+{% extends "campus/base.html" %}
+{% block title %}{{ quiz.title }} — CodeLearn{% endblock %}
+{% block page_title %}{{ quiz.title }}{% endblock %}
+{% block page_subtitle %}<p>{{ quiz.topic.course.title }} &middot; {{ quiz.topic.name }} &middot; {{ quiz.time_limit_minutes }} minute suggested limit &middot; one attempt only</p>{% endblock %}
+
+{% block content %}
+<form method="post">
+  {% csrf_token %}
+
+  {% for q in questions %}
+  <div class="card" style="margin-bottom: 16px;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 12px;">
+      <div class="section-title" style="margin:0;">Question {{ forloop.counter }}</div>
+      <span class="badge badge-neutral">{{ q.marks }} mark{{ q.marks|pluralize }}</span>
+    </div>
+
+    <p style="font-size: 14px; margin-top:0;">{{ q.prompt }}</p>
+
+    {% if q.code_snippet %}
+      <pre class="font-mono" style="background: var(--paper-dim); padding: 12px 14px; border-radius: var(--radius); font-size: 13px; overflow-x:auto;">{{ q.code_snippet }}</pre>
+    {% endif %}
+
+    {% if q.question_type == "MCQ" %}
+      <div style="margin-top: 10px;">
+        {% for opt in q.options.all %}
+          <label style="display:flex; align-items:center; gap:10px; padding: 8px 0; font-size: 14px; cursor:pointer;">
+            <input type="radio" name="question_{{ q.id }}" value="{{ opt.id }}" required>
+            {{ opt.text }}
+          </label>
+        {% endfor %}
+      </div>
+    {% else %}
+      <label class="field-label" for="id_question_{{ q.id }}" style="margin-top:10px;">Your answer</label>
+      <input type="text" name="question_{{ q.id }}" id="id_question_{{ q.id }}" class="field-input" placeholder="Type your answer…" required>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <button type="submit" class="btn btn-primary">Submit quiz</button>
+</form>
+{% endblock %}

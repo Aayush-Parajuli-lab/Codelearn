@@ -1,0 +1,40 @@
+{% extends "campus/base.html" %}
+{% block title %}Progress — CodeLearn{% endblock %}
+{% block page_title %}Your progress{% endblock %}
+{% block page_subtitle %}<p>Detailed breakdown per topic, used by the weak-topic classifier and recommender</p>{% endblock %}
+{% block topbar_extra %}<a href="{% url 'report_card_pdf' request.user.student_profile.id %}" class="btn btn-outline">Download report card</a>{% endblock %}
+
+{% block content %}
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Topic</th><th>Course</th><th>Quiz</th><th>Assignment</th><th>Coding</th><th>Attendance</th><th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in features %}
+      <tr>
+        <td>{{ f.topic.name }}</td>
+        <td class="row-sub">{{ f.topic.course.title }}</td>
+        <td class="font-mono">{{ f.quiz_score|floatformat:0 }}%</td>
+        <td class="font-mono">{{ f.assignment_score|floatformat:0 }}%</td>
+        <td class="font-mono">{{ f.coding_score|floatformat:0 }}%</td>
+        <td class="font-mono">{{ f.attendance_rate|floatformat:0 }}%</td>
+        <td>
+          {% if f.is_weak == True %}
+            <span class="badge badge-warn">Needs support</span>
+          {% elif f.is_weak == False %}
+            <span class="badge badge-pass">On track</span>
+          {% else %}
+            <span class="badge badge-neutral">Not yet scored</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="color: var(--text-muted);">No progress data yet — complete a quiz or assignment to get started.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

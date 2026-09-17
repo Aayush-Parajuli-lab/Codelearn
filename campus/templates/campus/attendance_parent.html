@@ -1,0 +1,51 @@
+{% extends "campus/base.html" %}
+{% block title %}Attendance — CodeLearn{% endblock %}
+{% block page_title %}Attendance{% endblock %}
+
+{% block topbar_extra %}
+{% if children|length > 1 %}
+<div style="display:flex; gap:8px;">
+  {% for c in children %}
+    <a href="?child={{ c.id }}" class="btn {% if c == child %}btn-primary{% else %}btn-outline{% endif %}">{{ c.user.get_full_name|default:c.user.username }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if not child %}
+  <div class="card"><p style="color: var(--text-muted);">No children are linked to this account yet.</p></div>
+{% else %}
+<div class="card" style="margin-bottom: 16px;">
+  <div style="display:flex; align-items:center; gap: 20px;">
+    <div class="font-display" style="font-size: 36px; font-weight: 600;">{{ attendance_pct }}%</div>
+    <div style="flex:1;">
+      <div class="bar-track"><div class="bar-fill pass" style="width:{{ attendance_pct }}%;"></div></div>
+      <p class="row-sub" style="margin-top:6px;">{{ child.user.get_full_name|default:child.user.username }}'s overall attendance</p>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">Recent records</div>
+  <table class="table">
+    <thead><tr><th>Date</th><th>Course</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for r in records %}
+      <tr>
+        <td class="font-mono">{{ r.date|date:"M j, Y" }}</td>
+        <td>{{ r.course.title }}</td>
+        <td>
+          <span class="badge {% if r.status == 'PRESENT' %}badge-pass{% elif r.status == 'ABSENT' %}badge-fail{% else %}badge-warn{% endif %}">
+            {{ r.get_status_display }}
+          </span>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" style="color: var(--text-muted);">No attendance records yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

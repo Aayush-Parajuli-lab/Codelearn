@@ -1,0 +1,71 @@
+{% load static %}
+<div class="chat-list">
+  <div class="chat-list-header">
+    <span class="font-display" style="font-size:17px; font-weight:600;">Chats</span>
+    <a href="{% url 'conversation_start' %}" class="chat-compose-btn" title="New message">✎</a>
+  </div>
+
+  {% if rows %}
+  <div class="chat-search-wrap">
+    <span class="chat-search-icon">🔍</span>
+    <input
+      type="text"
+      id="chat-search-input"
+      class="chat-search-input"
+      placeholder="Search chats"
+      autocomplete="off"
+      oninput="filterChatList(this.value)"
+    >
+  </div>
+  {% endif %}
+
+  <div class="chat-list-scroll" id="chat-list-scroll">
+    {% for row in rows %}
+    <a href="{% url 'conversation_detail' row.conversation.pk %}" class="chat-list-item {% if row.is_active %}active{% endif %}" data-name="{{ row.display_name|lower }}">
+      {% if row.conversation.is_group %}
+        <div class="chat-avatar chat-avatar-group">{{ row.display_name|slice:":2"|upper }}</div>
+      {% else %}
+        <div class="chat-avatar" style="background: {{ row.avatar.color }};">{{ row.avatar.initials }}</div>
+      {% endif %}
+      <div class="chat-list-text">
+        <div class="chat-list-name {% if row.unread_count %}unread{% endif %}">{{ row.display_name }}</div>
+        <div class="chat-list-preview {% if row.unread_count %}unread{% endif %}">
+          {% if row.last_message %}
+            {% if row.last_message.sender == request.user %}You: {% endif %}{{ row.last_message.body|truncatechars:38 }}
+          {% else %}
+            Say hello 👋
+          {% endif %}
+        </div>
+      </div>
+      {% if row.unread_count %}
+        <span class="chat-unread-dot">{{ row.unread_count }}</span>
+      {% endif %}
+    </a>
+    {% empty %}
+    <div style="padding: 24px 20px; color: var(--text-muted); font-size: 13.5px;">
+      No conversations yet.<br>Tap ✎ above to start one.
+    </div>
+    {% endfor %}
+    <div id="chat-search-empty" style="display:none; padding: 24px 20px; color: var(--text-muted); font-size: 13.5px;">
+      No chats match your search.
+    </div>
+  </div>
+</div>
+
+<script>
+  function filterChatList(query) {
+    var q = query.trim().toLowerCase();
+    var items = document.querySelectorAll('#chat-list-scroll .chat-list-item');
+    var visibleCount = 0;
+    items.forEach(function (item) {
+      var matches = item.dataset.name.indexOf(q) !== -1;
+      item.style.display = matches ? '' : 'none';
+      if (matches) visibleCount++;
+    });
+    var emptyState = document.getElementById('chat-search-empty');
+    if (emptyState) {
+      emptyState.style.display = (q && visibleCount === 0) ? 'block' : 'none';
+    }
+  }
+</script>
+

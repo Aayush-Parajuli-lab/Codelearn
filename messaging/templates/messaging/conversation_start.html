@@ -1,0 +1,55 @@
+{% extends "campus/base.html" %}
+{% block title %}New message — CodeLearn{% endblock %}
+{% block page_title %}New message{% endblock %}
+{% block page_subtitle %}<p>Pick one person for a direct message, or several to start a group.</p>{% endblock %}
+
+{% block content %}
+<div class="chat-shell has-active" style="max-width: 460px;">
+  <div class="chat-main">
+    <div class="chat-header">
+      <a href="{% url 'inbox' %}" class="chat-back-link" title="Back to chats">‹</a>
+      <div class="chat-header-name">To:</div>
+    </div>
+
+    {% if error %}
+      <p style="color: var(--fail); font-size: 13px; padding: 10px 20px 0; margin:0;">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" id="new-convo-form" style="display:flex; flex-direction:column; flex:1; min-height:0;">
+      {% csrf_token %}
+
+      <div class="chat-list-scroll" style="flex:1;">
+        {% for row in recipient_rows %}
+          <label class="contact-row">
+            <input type="checkbox" name="recipients" value="{{ row.user.id }}" class="contact-checkbox" onchange="onRecipientsChange()">
+            <div class="chat-avatar chat-avatar-sm" style="background: {{ row.avatar.color }};">{{ row.avatar.initials }}</div>
+            <div class="chat-list-text">
+              <div class="chat-list-name">{{ row.user.get_full_name|default:row.user.username }}</div>
+              <div class="chat-list-preview">{{ row.user.get_role_display }}</div>
+            </div>
+            <span class="contact-check-circle"></span>
+          </label>
+        {% empty %}
+          <div style="padding: 20px; color: var(--text-muted); font-size: 13.5px;">No one is available to message yet.</div>
+        {% endfor %}
+      </div>
+
+      <div id="group-name-field" style="display:none; padding: 12px 16px 0;">
+        <input class="field-input" type="text" name="group_name" id="id_group_name" placeholder="Name this group…">
+      </div>
+
+      <div class="chat-input-bar">
+        <input type="text" name="body" placeholder="Write your first message…" autocomplete="off" required>
+        <button type="submit" class="chat-send-btn" title="Start conversation">➤</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function onRecipientsChange() {
+    const checked = document.querySelectorAll('input[name="recipients"]:checked').length;
+    document.getElementById('group-name-field').style.display = checked > 1 ? 'block' : 'none';
+  }
+</script>
+{% endblock %}

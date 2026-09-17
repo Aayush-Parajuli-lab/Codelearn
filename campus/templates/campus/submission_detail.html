@@ -1,0 +1,60 @@
+{% extends "campus/base.html" %}
+{% block title %}Submission #{{ submission.pk }} — CodeLearn{% endblock %}
+{% block page_title %}{{ submission.assignment.title }}{% endblock %}
+{% block page_subtitle %}
+  <p>{{ submission.student.user.get_full_name|default:submission.student.user.username }} &middot; attempt #{{ submission.attempt_number }} &middot; {{ submission.submitted_at|date:"M j, Y g:i A" }}</p>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-4" style="margin-bottom: 16px;">
+  <div class="card stat-card">
+    <div class="stat-label">Status</div>
+    <div style="margin-top:6px;">
+      <span class="badge {% if submission.status == 'PASSED' %}badge-pass{% elif submission.status == 'FAILED' or submission.status == 'ERROR' %}badge-fail{% else %}badge-warn{% endif %}" style="font-size:14px;">
+        {{ submission.get_status_display }}
+      </span>
+    </div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Score</div>
+    <div class="stat-value">{{ submission.score }}%</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Test cases passed</div>
+    <div class="stat-value">{{ submission.passed_test_cases }}/{{ submission.total_test_cases }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Execution time</div>
+    <div class="stat-value">{{ submission.execution_time_ms|floatformat:0|default:"—" }}<span style="font-size:16px;">ms</span></div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 16px;">
+  <div class="section-title">Submitted code</div>
+  <pre class="font-mono" style="background: var(--paper-dim); padding: 14px 16px; border-radius: var(--radius); font-size: 13px; overflow-x: auto; margin: 0;">{{ submission.source_code }}</pre>
+</div>
+
+<div class="card">
+  <div class="section-title">Test case results</div>
+  <table class="table">
+    <thead><tr><th>Test case</th><th>Result</th><th>Notes</th></tr></thead>
+    <tbody>
+      {% for r in results %}
+      <tr>
+        <td class="font-mono">#{{ r.test_case.pk }}{% if not r.test_case.is_hidden %} (visible){% endif %}</td>
+        <td>
+          {% if r.passed %}
+            <span class="badge badge-pass">Passed</span>
+          {% else %}
+            <span class="badge badge-fail">Failed</span>
+          {% endif %}
+        </td>
+        <td class="row-sub font-mono" style="max-width: 400px; white-space: pre-wrap;">{{ r.error_message|truncatechars:200|default:"—" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3" style="color: var(--text-muted);">No test results recorded.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

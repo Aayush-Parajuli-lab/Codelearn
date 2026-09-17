@@ -1,0 +1,59 @@
+{% extends "campus/base.html" %}
+{% block title %}{{ attempt.quiz.title }} result — CodeLearn{% endblock %}
+{% block page_title %}{{ attempt.quiz.title }}{% endblock %}
+{% block page_subtitle %}<p>{{ attempt.quiz.topic.course.title }} &middot; {{ attempt.quiz.topic.name }}</p>{% endblock %}
+
+{% block content %}
+<div class="grid grid-4" style="margin-bottom: 20px;">
+  <div class="card stat-card">
+    <div class="stat-label">Score</div>
+    <div class="stat-value">{{ attempt.score|floatformat:0 }}/{{ attempt.total_marks|floatformat:0 }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Percentage</div>
+    <div class="stat-value">{{ attempt.percentage|floatformat:0 }}%</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Student</div>
+    <div style="margin-top:6px; font-size:15px; font-weight:500;">{{ attempt.student.user.get_full_name|default:attempt.student.user.username }}</div>
+  </div>
+  <div class="card stat-card">
+    <div class="stat-label">Submitted</div>
+    <div style="margin-top:6px; font-size:14px;">{{ attempt.submitted_at|date:"M j, g:i A" }}</div>
+  </div>
+</div>
+
+{% for a in answers %}
+<div class="card" style="margin-bottom: 14px;">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 10px;">
+    <div class="section-title" style="margin:0;">Question {{ forloop.counter }}</div>
+    <span class="badge {% if a.is_correct %}badge-pass{% else %}badge-fail{% endif %}">
+      {{ a.is_correct|yesno:"Correct,Incorrect" }}
+    </span>
+  </div>
+  <p style="font-size: 14px; margin-top:0;">{{ a.question.prompt }}</p>
+  {% if a.question.code_snippet %}
+    <pre class="font-mono" style="background: var(--paper-dim); padding: 12px 14px; border-radius: var(--radius); font-size: 13px; overflow-x:auto;">{{ a.question.code_snippet }}</pre>
+  {% endif %}
+  <table class="table" style="margin-top:8px;">
+    <tbody>
+      <tr><td class="row-sub" style="width:140px;">Your answer</td><td>{{ a.response|default:"—" }}</td></tr>
+      {% if not a.is_correct %}
+        <tr>
+          <td class="row-sub">Correct answer</td>
+          <td class="font-mono">
+            {% if a.question.question_type == "MCQ" %}
+              {% for opt in a.question.options.all %}{% if opt.is_correct %}{{ opt.text }}{% endif %}{% endfor %}
+            {% else %}
+              {{ a.question.correct_answer }}
+            {% endif %}
+          </td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endfor %}
+
+<a href="{% url 'quiz_list' %}" class="btn btn-outline">Back to quizzes</a>
+{% endblock %}

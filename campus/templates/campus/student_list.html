@@ -1,0 +1,45 @@
+{% extends "campus/base.html" %}
+{% block title %}Students — CodeLearn{% endblock %}
+{% block page_title %}Students{% endblock %}
+{% block page_subtitle %}<p>{{ total_count }} student{{ total_count|pluralize }}{% if query %} matching "{{ query }}"{% endif %}</p>{% endblock %}
+{% block topbar_extra %}
+<div style="display:flex; gap:10px;">
+  <a href="{% url 'student_export' %}?{{ request.GET.urlencode }}" class="btn btn-outline">Export CSV</a>
+  <a href="{% url 'user_create' %}" class="btn btn-primary">Add user</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="get" style="margin-bottom: 14px; max-width: 320px;">
+  <input type="text" name="q" class="field-input" style="margin-bottom:0;" placeholder="Search by name or roll number…" value="{{ query }}">
+</form>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr><th>Name</th><th>Roll number</th><th>Class</th><th>Avg score</th><th>Attendance</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.student.user.get_full_name|default:row.student.user.username }}</td>
+        <td class="font-mono">{{ row.student.roll_number }}</td>
+        <td>{{ row.student.school_class|default:"—" }}</td>
+        <td>
+          {% if row.avg_score is not None %}
+            <span class="badge {% if row.avg_score >= 75 %}badge-pass{% elif row.avg_score >= 50 %}badge-warn{% else %}badge-fail{% endif %}">{{ row.avg_score }}%</span>
+          {% else %}
+            <span class="row-sub">No submissions</span>
+          {% endif %}
+        </td>
+        <td class="font-mono">{{ row.attendance_pct }}%</td>
+        <td><a href="{% url 'report_card_pdf' row.student.id %}" class="btn btn-outline">Report card</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="color: var(--text-muted);">{% if query %}No students match "{{ query }}".{% else %}No students yet.{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% include "campus/_pagination.html" %}
+</div>
+{% endblock %}

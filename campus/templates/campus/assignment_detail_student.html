@@ -1,0 +1,58 @@
+{% extends "campus/base.html" %}
+{% block title %}{{ assignment.title }} — CodeLearn{% endblock %}
+{% block page_title %}{{ assignment.title }}{% endblock %}
+{% block page_subtitle %}<p>{{ assignment.topic.course.title }} &middot; due {{ assignment.deadline|date:"M j, Y" }}</p>{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 16px;">
+  <div class="section-title">Description</div>
+  <p style="font-size: 14px; line-height: 1.6;">{{ assignment.description }}</p>
+  {% if assignment.instructions %}
+    <div class="section-title" style="margin-top:16px;">Instructions</div>
+    <p style="font-size: 14px; line-height: 1.6;">{{ assignment.instructions }}</p>
+  {% endif %}
+</div>
+
+{% if test_cases %}
+<div class="card" style="margin-bottom: 16px;">
+  <div class="section-title">Sample test cases</div>
+  <table class="table">
+    <thead><tr><th>Input</th><th>Expected output</th></tr></thead>
+    <tbody>
+      {% for tc in test_cases %}
+      <tr><td class="font-mono">{{ tc.input_data|default:"—" }}</td><td class="font-mono">{{ tc.expected_output }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom: 16px; display:flex; justify-content: space-between; align-items:center;">
+  <span class="row-sub">Ready to submit your solution?</span>
+  <a href="{% url 'assignment_submit' assignment.pk %}" class="btn btn-primary">Write &amp; submit code</a>
+</div>
+
+<div class="card">
+  <div class="section-title">Your submissions</div>
+  <table class="table">
+    <thead><tr><th>Attempt</th><th>Status</th><th>Score</th><th>Submitted</th><th></th></tr></thead>
+    <tbody>
+      {% for s in my_submissions %}
+      <tr>
+        <td class="font-mono">#{{ s.attempt_number }}</td>
+        <td>
+          <span class="badge {% if s.status == 'PASSED' %}badge-pass{% elif s.status == 'FAILED' or s.status == 'ERROR' %}badge-fail{% else %}badge-warn{% endif %}">
+            {{ s.get_status_display }}
+          </span>
+        </td>
+        <td class="font-mono">{{ s.score }}%</td>
+        <td class="row-sub">{{ s.submitted_at|date:"M j, g:i A" }}</td>
+        <td><a href="{% url 'submission_detail' s.pk %}" class="btn btn-outline">Details</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="color: var(--text-muted);">You haven't submitted this assignment yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

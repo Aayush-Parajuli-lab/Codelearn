@@ -1,0 +1,14 @@
+venv/
+.venv/
+db.sqlite3
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.env
+media/
+staticfiles/
+*.log
+/mnt/
+ml_models/
+nginx/certs/*.pem

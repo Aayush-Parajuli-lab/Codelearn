@@ -1,0 +1,53 @@
+{% extends "campus/base.html" %}
+{% block title %}{{ assignment.title }} — CodeLearn{% endblock %}
+{% block page_title %}{{ assignment.title }}{% endblock %}
+{% block page_subtitle %}<p>{{ assignment.topic.course.title }} &middot; due {{ assignment.deadline|date:"M j, Y" }}</p>{% endblock %}
+{% block topbar_extra %}<a href="{% url 'plagiarism_check' assignment.pk %}" class="btn btn-outline">Check for plagiarism</a>{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 16px;">
+  <div class="section-title">Description</div>
+  <p style="font-size: 14px; line-height: 1.6;">{{ assignment.description }}</p>
+</div>
+
+<div class="card" style="margin-bottom: 16px;">
+  <div class="section-title">Test cases</div>
+  <table class="table">
+    <thead><tr><th>Input</th><th>Expected output</th><th>Visibility</th><th>Weight</th></tr></thead>
+    <tbody>
+      {% for tc in test_cases %}
+      <tr>
+        <td class="font-mono">{{ tc.input_data|default:"—" }}</td>
+        <td class="font-mono">{{ tc.expected_output }}</td>
+        <td><span class="badge badge-neutral">{% if tc.is_hidden %}Hidden{% else %}Visible{% endif %}</span></td>
+        <td class="font-mono">{{ tc.weight }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <div class="section-title">Submissions</div>
+  <table class="table">
+    <thead><tr><th>Student</th><th>Status</th><th>Score</th><th>Passed</th><th></th></tr></thead>
+    <tbody>
+      {% for s in submissions %}
+      <tr>
+        <td>{{ s.student.user.get_full_name|default:s.student.user.username }}</td>
+        <td>
+          <span class="badge {% if s.status == 'PASSED' %}badge-pass{% elif s.status == 'FAILED' or s.status == 'ERROR' %}badge-fail{% else %}badge-warn{% endif %}">
+            {{ s.get_status_display }}
+          </span>
+        </td>
+        <td class="font-mono">{{ s.score }}%</td>
+        <td class="font-mono">{{ s.passed_test_cases }}/{{ s.total_test_cases }}</td>
+        <td><a href="{% url 'submission_detail' s.pk %}" class="btn btn-outline">Details</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="color: var(--text-muted);">No submissions yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

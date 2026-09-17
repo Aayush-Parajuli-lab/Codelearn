@@ -1,0 +1,54 @@
+{% extends "campus/base.html" %}
+{% block title %}Attendance — CodeLearn{% endblock %}
+{% block page_title %}Attendance{% endblock %}
+{% block page_subtitle %}<p>Marking for {{ today|date:"l, F j, Y" }}</p>{% endblock %}
+
+{% block topbar_extra %}
+<div style="display:flex; gap:8px; align-items:center;">
+  {% for c in courses %}
+    <a href="?course={{ c.id }}" class="btn {% if c == course %}btn-primary{% else %}btn-outline{% endif %}">{{ c.title }}</a>
+  {% endfor %}
+  {% if course %}
+    <a href="{% url 'attendance_export' %}?course={{ course.id }}" class="btn btn-outline">Export CSV</a>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+{% if not course %}
+  <div class="card"><p style="color: var(--text-muted);">You aren't assigned to any courses yet.</p></div>
+{% else %}
+<form method="post" action="{% url 'mark_attendance' %}">
+  {% csrf_token %}
+  <input type="hidden" name="course_id" value="{{ course.id }}">
+  <div class="card">
+    <div class="section-title">{{ course.title }} — mark today's attendance</div>
+    <table class="table">
+      <thead><tr><th>Student</th><th>Overall attendance</th><th>Today's status</th></tr></thead>
+      <tbody>
+        {% for r in roster %}
+        <tr>
+          <td>{{ r.student.user.get_full_name|default:r.student.user.username }}</td>
+          <td class="font-mono">{{ r.attendance_pct }}%</td>
+          <td>
+            <select name="status_{{ r.student.id }}" class="field-input" style="margin-bottom:0; width: 160px; padding: 6px 8px;">
+              {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if r.current_status == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" style="color: var(--text-muted);">No students enrolled in this course.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if roster %}
+  <div style="margin-top: 16px;">
+    <button type="submit" class="btn btn-primary">Save attendance</button>
+  </div>
+  {% endif %}
+</form>
+{% endif %}
+{% endblock %}

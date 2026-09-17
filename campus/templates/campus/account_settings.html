@@ -1,0 +1,105 @@
+{% extends "campus/base.html" %}
+{% block title %}Settings — CodeLearn{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block page_subtitle %}<p>Your profile, appearance, and account</p>{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 520px;">
+
+  <div class="settings-section">
+    <div class="section-title">Profile</div>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="profile">
+
+      <div style="display:flex; align-items:center; gap:16px; margin-bottom:18px;">
+        {% if request.user.profile_picture %}
+          <img src="{{ request.user.profile_picture.url }}" alt="Profile picture" style="width:64px; height:64px; border-radius:50%; object-fit:cover; border:1px solid var(--line);">
+        {% else %}
+          <div class="chat-avatar" style="width:64px; height:64px; font-size:20px; background: {{ avatar.color }};">{{ avatar.initials }}</div>
+        {% endif %}
+        <div>
+          <label class="field-label" for="id_profile_picture" style="margin-bottom:6px;">Profile picture</label>
+          {{ profile_form.profile_picture }}
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="gap: 12px;">
+        <div>
+          <label class="field-label" for="id_first_name">First name</label>
+          {{ profile_form.first_name }}
+        </div>
+        <div>
+          <label class="field-label" for="id_last_name">Last name</label>
+          {{ profile_form.last_name }}
+        </div>
+      </div>
+
+      <label class="field-label" for="id_email">Email</label>
+      {{ profile_form.email }}
+
+      <label class="field-label" for="id_phone_number">Phone number</label>
+      {{ profile_form.phone_number }}
+
+      <button type="submit" class="btn btn-primary">Save profile</button>
+    </form>
+  </div>
+
+  <div class="settings-section">
+    <div class="section-title">Appearance</div>
+    <form method="post" id="theme-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="theme">
+
+      <div class="theme-options">
+        <label class="theme-option">
+          <input type="radio" name="theme_preference" value="LIGHT" onchange="this.form.submit()" {% if theme_form.theme_preference.value == "LIGHT" %}checked{% endif %}>
+          <span class="theme-option-icon">☀️</span> Light
+        </label>
+        <label class="theme-option">
+          <input type="radio" name="theme_preference" value="DARK" onchange="this.form.submit()" {% if theme_form.theme_preference.value == "DARK" %}checked{% endif %}>
+          <span class="theme-option-icon">🌙</span> Dark
+        </label>
+        <label class="theme-option">
+          <input type="radio" name="theme_preference" value="SYSTEM" onchange="this.form.submit()" {% if theme_form.theme_preference.value == "SYSTEM" %}checked{% endif %}>
+          <span class="theme-option-icon">🖥️</span> System
+        </label>
+      </div>
+    </form>
+  </div>
+
+  <div class="settings-section">
+    <div class="section-title">Notifications</div>
+    <form method="post" id="notif-form" style="display:flex; align-items:center; justify-content:space-between;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="notifications">
+      <div>
+        <div class="row-title">Email notifications</div>
+        <div class="row-sub">New messages, assignments, and grades.</div>
+      </div>
+      <label class="toggle-switch">
+        <input type="checkbox" name="email_notifications" value="on" onchange="this.form.submit()" {% if notif_form.email_notifications.value %}checked{% endif %}>
+        <span class="toggle-slider"></span>
+      </label>
+    </form>
+  </div>
+
+  <div class="settings-section">
+    <div class="section-title">Account</div>
+    <div class="row-list">
+      <div class="row-item">
+        <span class="row-title" style="font-weight:400;">Password</span>
+        <a href="{% url 'change_password' %}" class="btn btn-outline">Change password</a>
+      </div>
+      <div class="row-item">
+        <span class="row-title" style="font-weight:400;">Signed in as {{ request.user.username }}</span>
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline" style="color: var(--fail); border-color: var(--fail);">Sign out</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

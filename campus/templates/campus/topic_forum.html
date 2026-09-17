@@ -1,0 +1,50 @@
+{% extends "campus/base.html" %}
+{% block title %}{{ topic.name }} discussion — CodeLearn{% endblock %}
+{% block page_title %}{{ topic.name }}{% endblock %}
+{% block page_subtitle %}<p>{{ topic.course.title }} &middot; discussion</p>{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 20px;">
+  <div class="section-title">Ask a question</div>
+  <form method="post">
+    {% csrf_token %}
+    <textarea name="body" class="field-input" rows="3" placeholder="Ask something about this topic…" required></textarea>
+    <button type="submit" class="btn btn-primary">Post</button>
+  </form>
+</div>
+
+{% for post in posts %}
+<div class="card" style="margin-bottom: 16px;">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+      <div class="row-title">{{ post.author.get_full_name|default:post.author.username }}</div>
+      <div class="row-sub">{{ post.created_at|date:"M j, g:i A" }}</div>
+    </div>
+  </div>
+  <p style="font-size: 14px; margin: 10px 0;">{{ post.body }}</p>
+
+  {% if post.replies.all %}
+    <div style="margin-left: 20px; border-left: 2px solid var(--line); padding-left: 14px;">
+      {% for reply in post.replies.all %}
+        <div style="margin-bottom: 10px;">
+          <div class="row-sub" style="font-weight:500; color: var(--text);">{{ reply.author.get_full_name|default:reply.author.username }}</div>
+          <div class="row-sub" style="margin-bottom:2px;">{{ reply.created_at|date:"M j, g:i A" }}</div>
+          <p style="font-size: 13.5px; margin: 2px 0 0;">{{ reply.body }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" style="display:flex; gap:8px; margin-top: 10px;">
+    {% csrf_token %}
+    <input type="hidden" name="parent_id" value="{{ post.id }}">
+    <input type="text" name="body" class="field-input" style="margin-bottom:0; flex:1;" placeholder="Reply…" required>
+    <button type="submit" class="btn btn-outline">Reply</button>
+  </form>
+</div>
+{% empty %}
+<div class="card">
+  <p style="color: var(--text-muted); margin:0;">No discussion yet — be the first to ask something.</p>
+</div>
+{% endfor %}
+{% endblock %}

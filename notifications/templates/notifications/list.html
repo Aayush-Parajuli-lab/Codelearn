@@ -1,0 +1,31 @@
+{% extends "campus/base.html" %}
+{% block title %}Notifications — CodeLearn{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+{% block topbar_extra %}
+{% if unread_count %}
+<form method="post" action="{% url 'notification_mark_all_read' %}">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-outline">Mark all as read</button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card" style="padding:0;">
+  <div class="row-list">
+    {% for n in notifications %}
+    <a href="{% url 'notification_open' n.pk %}" style="text-decoration:none; color:inherit;">
+      <div class="row-item" style="padding: 14px 20px; {% if not n.is_read %}background: var(--primary-dim);{% endif %}">
+        <div>
+          <div class="row-title" style="font-weight: {% if n.is_read %}400{% else %}600{% endif %};">{{ n.message }}</div>
+          <div class="row-sub">{{ n.get_category_display }} &middot; {{ n.created_at|date:"M j, g:i A" }}</div>
+        </div>
+        {% if not n.is_read %}<span class="chat-unread-dot" style="width:9px; height:9px; min-width:9px; padding:0;"></span>{% endif %}
+      </div>
+    </a>
+    {% empty %}
+    <div style="padding: 24px 20px; color: var(--text-muted);">No notifications yet.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
