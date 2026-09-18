@@ -1,18 +1,19 @@
 {% extends "campus/base.html" %}
 {% block title %}Teacher dashboard — CodeLearn{% endblock %}
 {% block page_title %}Teacher dashboard{% endblock %}
+{% block page_subtitle %}<p>Welcome back, {{ request.user.get_full_name|default:request.user.username }} &middot; {% now "l, F j, Y" %}</p>{% endblock %}
 
 {% block content %}
 <div class="grid grid-4" style="margin-bottom: 20px;">
-  <div class="card stat-card">
+  <div class="card stat-card accent-primary">
     <div class="stat-label">My courses</div>
     <div class="stat-value">{{ my_courses_count }}</div>
   </div>
-  <div class="card stat-card">
+  <div class="card stat-card accent-pass">
     <div class="stat-label">Students</div>
     <div class="stat-value">{{ my_students_count }}</div>
   </div>
-  <div class="card stat-card">
+  <div class="card stat-card {% if pending_submissions %}accent-warn{% endif %}">
     <div class="stat-label">Pending submissions</div>
     <div class="stat-value">{{ pending_submissions }}</div>
   </div>
@@ -27,7 +28,7 @@
     <div class="section-title">Recent submissions</div>
     <div class="row-list">
       {% for s in recent_submissions %}
-      <div class="row-item">
+      <a href="{% url 'submission_detail' s.pk %}" class="row-item">
         <div>
           <div class="row-title">{{ s.student.user.get_full_name|default:s.student.user.username }}</div>
           <div class="row-sub">{{ s.assignment.title }} &middot; {{ s.passed_test_cases }}/{{ s.total_test_cases }} passed</div>
@@ -35,9 +36,12 @@
         <span class="badge {% if s.status == 'PASSED' %}badge-pass{% elif s.status == 'FAILED' or s.status == 'ERROR' %}badge-fail{% else %}badge-warn{% endif %}">
           {{ s.get_status_display }}
         </span>
-      </div>
+      </a>
       {% empty %}
-      <p style="color: var(--text-muted); font-size: 13.5px;">No submissions yet.</p>
+      <div class="empty-state">
+        <div class="empty-state-icon">◧</div>
+        <p class="empty-state-text">No submissions yet.</p>
+      </div>
       {% endfor %}
     </div>
   </div>
@@ -46,15 +50,18 @@
     <div class="section-title">Upcoming deadlines</div>
     <div class="row-list">
       {% for a in upcoming_assignments %}
-      <div class="row-item">
+      <a href="{% url 'assignment_detail' a.pk %}" class="row-item">
         <div>
           <div class="row-title">{{ a.title }}</div>
           <div class="row-sub">{{ a.topic.course.title }}</div>
         </div>
         <span class="row-sub font-mono">{{ a.deadline|date:"M j, Y" }}</span>
-      </div>
+      </a>
       {% empty %}
-      <p style="color: var(--text-muted); font-size: 13.5px;">Nothing due soon.</p>
+      <div class="empty-state">
+        <div class="empty-state-icon">📅</div>
+        <p class="empty-state-text">Nothing due soon.</p>
+      </div>
       {% endfor %}
     </div>
   </div>
@@ -65,8 +72,9 @@
   <p style="color: var(--text-muted); font-size: 13px; margin-top: -8px; margin-bottom: 14px;">
     Flagged by the weak-topic classifier based on quiz, assignment, coding, and attendance data.
   </p>
+  {% if weak_topic_alerts %}
   <table class="table">
-    <thead><tr><th>Student</th><th>Topic</th><th>Confidence</th></tr></thead>
+    <thead><tr><th>Student</th><th>Topic</th><th>Confidence</th><th></th></tr></thead>
     <tbody>
       {% for f in weak_topic_alerts %}
       <tr>
@@ -78,11 +86,18 @@
             <span class="font-mono" style="font-size:12.5px;">{{ f.weak_probability|floatformat:2 }}</span>
           </div>
         </td>
+        <td style="text-align:right;">
+          <a href="{% url 'report_card_pdf' f.student.pk %}" class="btn btn-outline" style="padding: 5px 10px; font-size: 12.5px;">Report</a>
+        </td>
       </tr>
-      {% empty %}
-      <tr><td colspan="3" style="color: var(--text-muted);">No students currently flagged. Run the classifier to refresh this list.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">✓</div>
+    <p class="empty-state-text">No students currently flagged. Run the classifier to refresh this list.</p>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

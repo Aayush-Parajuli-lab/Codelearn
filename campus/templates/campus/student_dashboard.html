@@ -1,10 +1,11 @@
 {% extends "campus/base.html" %}
 {% block title %}My dashboard — CodeLearn{% endblock %}
 {% block page_title %}Your dashboard{% endblock %}
+{% block page_subtitle %}<p>Welcome back, {{ request.user.get_full_name|default:request.user.username }} &middot; {% now "l, F j, Y" %}</p>{% endblock %}
 
 {% block content %}
 <div class="grid grid-4" style="margin-bottom: 20px;">
-  <div class="card stat-card">
+  <div class="card stat-card accent-primary">
     <div class="stat-label">Courses enrolled</div>
     <div class="stat-value">{{ courses_enrolled }}</div>
   </div>
@@ -12,11 +13,11 @@
     <div class="stat-label">Assignments submitted</div>
     <div class="stat-value">{{ assignments_done }}</div>
   </div>
-  <div class="card stat-card">
+  <div class="card stat-card accent-pass">
     <div class="stat-label">Average score</div>
     <div class="stat-value">{{ average_score }}%</div>
   </div>
-  <div class="card stat-card">
+  <div class="card stat-card {% if attendance_pct < 75 %}accent-warn{% else %}accent-pass{% endif %}">
     <div class="stat-label">Attendance</div>
     <div class="stat-value">{{ attendance_pct }}%</div>
   </div>
@@ -37,7 +38,10 @@
         </div>
       </div>
       {% empty %}
-      <p style="color: var(--text-muted); font-size: 13.5px;">Complete an assignment to see your progress here.</p>
+      <div class="empty-state">
+        <div class="empty-state-icon">▤</div>
+        <p class="empty-state-text">Complete an assignment to see your progress here.</p>
+      </div>
       {% endfor %}
     </div>
   </div>
@@ -51,10 +55,13 @@
           <div class="row-title">{{ r.recommended_lesson.title|default:"Practice exercise" }}</div>
           <div class="row-sub">{{ r.topic.name }} &middot; {{ r.reason }}</div>
         </div>
-        <a href="#" class="btn btn-outline">Continue</a>
+        <a href="{% url 'course_topics' r.topic.course_id %}" class="btn btn-outline">Continue</a>
       </div>
       {% empty %}
-      <p style="color: var(--text-muted); font-size: 13.5px;">No recommendations right now — keep up the good work.</p>
+      <div class="empty-state">
+        <div class="empty-state-icon">✓</div>
+        <p class="empty-state-text">No recommendations right now — keep up the good work.</p>
+      </div>
       {% endfor %}
     </div>
   </div>
@@ -65,7 +72,7 @@
     <div class="section-title">Recent submissions</div>
     <div class="row-list">
       {% for s in recent_submissions %}
-      <div class="row-item">
+      <a href="{% url 'submission_detail' s.pk %}" class="row-item">
         <div>
           <div class="row-title">{{ s.assignment.title }}</div>
           <div class="row-sub">{{ s.passed_test_cases }}/{{ s.total_test_cases }} test cases passed</div>
@@ -73,9 +80,12 @@
         <span class="badge {% if s.status == 'PASSED' %}badge-pass{% elif s.status == 'FAILED' or s.status == 'ERROR' %}badge-fail{% else %}badge-warn{% endif %}">
           {{ s.get_status_display }}
         </span>
-      </div>
+      </a>
       {% empty %}
-      <p style="color: var(--text-muted); font-size: 13.5px;">You haven't submitted anything yet.</p>
+      <div class="empty-state">
+        <div class="empty-state-icon">◧</div>
+        <p class="empty-state-text">You haven't submitted anything yet.</p>
+      </div>
       {% endfor %}
     </div>
   </div>
@@ -84,15 +94,18 @@
     <div class="section-title">Upcoming deadlines</div>
     <div class="row-list">
       {% for a in upcoming_assignments %}
-      <div class="row-item">
+      <a href="{% url 'assignment_detail' a.pk %}" class="row-item">
         <div>
           <div class="row-title">{{ a.title }}</div>
           <div class="row-sub">{{ a.topic.course.title }}</div>
         </div>
         <span class="row-sub font-mono">{{ a.deadline|date:"M j, Y" }}</span>
-      </div>
+      </a>
       {% empty %}
-      <p style="color: var(--text-muted); font-size: 13.5px;">Nothing due soon.</p>
+      <div class="empty-state">
+        <div class="empty-state-icon">📅</div>
+        <p class="empty-state-text">Nothing due soon.</p>
+      </div>
       {% endfor %}
     </div>
   </div>

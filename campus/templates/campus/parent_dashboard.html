@@ -1,10 +1,11 @@
 {% extends "campus/base.html" %}
 {% block title %}Parent dashboard — CodeLearn{% endblock %}
 {% block page_title %}Parent dashboard{% endblock %}
+{% block page_subtitle %}<p>{% if child %}Viewing {{ child.user.get_full_name|default:child.user.username }}'s progress &middot; {% endif %}{% now "l, F j, Y" %}</p>{% endblock %}
 
 {% block topbar_extra %}
 {% if children|length > 1 %}
-<div style="display:flex; gap:8px;">
+<div style="display:flex; gap:8px; flex-wrap: wrap;">
   {% for c in children %}
     <a href="?child={{ c.id }}" class="btn {% if c == child %}btn-primary{% else %}btn-outline{% endif %}">
       {{ c.user.get_full_name|default:c.user.username }}
@@ -17,16 +18,19 @@
 {% block content %}
 {% if not child %}
   <div class="card">
-    <p style="color: var(--text-muted);">No children are linked to this account yet.</p>
+    <div class="empty-state">
+      <div class="empty-state-icon">◈</div>
+      <p class="empty-state-text">No children are linked to this account yet.</p>
+    </div>
   </div>
 {% else %}
 <div class="grid grid-2" style="margin-bottom: 16px;">
   <div class="card">
     <div class="section-title">Attendance</div>
     <div style="display:flex; align-items:center; gap: 20px;">
-      <div class="font-display" style="font-size: 36px; font-weight: 600;">{{ attendance_pct }}%</div>
+      <div class="font-display" style="font-size: 36px; font-weight: 600; color: {% if attendance_pct < 75 %}var(--warn){% else %}var(--pass){% endif %};">{{ attendance_pct }}%</div>
       <div style="flex:1;">
-        <div class="bar-track"><div class="bar-fill pass" style="width:{{ attendance_pct }}%;"></div></div>
+        <div class="bar-track"><div class="bar-fill {% if attendance_pct < 75 %}warn{% else %}pass{% endif %}" style="width:{{ attendance_pct }}%;"></div></div>
         <p class="row-sub" style="margin-top:6px;">{{ child.user.get_full_name|default:child.user.username }}'s classes attended</p>
       </div>
     </div>
@@ -36,9 +40,16 @@
     <div class="section-title">Notifications</div>
     <div class="row-list">
       {% for n in notifications %}
-      <div class="row-item"><span class="row-title" style="font-weight:400;">{{ n }}</span></div>
+      <div class="row-item">
+        <span class="row-title" style="font-weight:400; display:flex; align-items:center; gap:8px;">
+          <span class="badge badge-warn" style="padding: 2px 6px;">!</span>{{ n }}
+        </span>
+      </div>
       {% empty %}
-      <p style="color: var(--text-muted); font-size: 13.5px;">No new notifications.</p>
+      <div class="empty-state">
+        <div class="empty-state-icon">✓</div>
+        <p class="empty-state-text">No new notifications.</p>
+      </div>
       {% endfor %}
     </div>
   </div>
@@ -59,7 +70,10 @@
         </div>
       </div>
       {% empty %}
-      <p style="color: var(--text-muted); font-size: 13.5px;">No performance data yet.</p>
+      <div class="empty-state">
+        <div class="empty-state-icon">▤</div>
+        <p class="empty-state-text">No performance data yet.</p>
+      </div>
       {% endfor %}
     </div>
   </div>
@@ -78,7 +92,10 @@
         </span>
       </div>
       {% empty %}
-      <p style="color: var(--text-muted); font-size: 13.5px;">No submissions yet.</p>
+      <div class="empty-state">
+        <div class="empty-state-icon">◧</div>
+        <p class="empty-state-text">No submissions yet.</p>
+      </div>
       {% endfor %}
     </div>
   </div>

@@ -1,14 +1,15 @@
 {% extends "campus/base.html" %}
 {% block title %}Admin dashboard — CodeLearn{% endblock %}
 {% block page_title %}Admin dashboard{% endblock %}
+{% block page_subtitle %}<p>System-wide overview &middot; {% now "l, F j, Y" %}</p>{% endblock %}
 
 {% block content %}
 <div class="grid grid-4" style="margin-bottom: 20px;">
-  <div class="card stat-card">
+  <div class="card stat-card accent-primary">
     <div class="stat-label">Total students</div>
     <div class="stat-value">{{ total_students }}</div>
   </div>
-  <div class="card stat-card">
+  <div class="card stat-card accent-pass">
     <div class="stat-label">Total teachers</div>
     <div class="stat-value">{{ total_teachers }}</div>
   </div>
@@ -16,7 +17,7 @@
     <div class="stat-label">Total parents</div>
     <div class="stat-value">{{ total_parents }}</div>
   </div>
-  <div class="card stat-card">
+  <div class="card stat-card accent-warn">
     <div class="stat-label">Total courses</div>
     <div class="stat-value">{{ total_courses }}</div>
   </div>
@@ -25,26 +26,38 @@
 <div class="grid grid-2">
   <div class="card">
     <div class="section-title">Top courses</div>
+    {% if top_courses %}
     <table class="table">
       <thead><tr><th>Course</th><th>Students enrolled</th></tr></thead>
       <tbody>
         {% for course in top_courses %}
         <tr>
           <td>{{ course.title }}</td>
-          <td class="font-mono">{{ course.student_count }}</td>
+          <td style="width: 42%;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div class="bar-track" style="flex:1;">
+                <div class="bar-fill" style="width: {% if top_courses.0.student_count %}{% widthratio course.student_count top_courses.0.student_count 100 %}{% else %}0{% endif %}%;"></div>
+              </div>
+              <span class="font-mono" style="font-size:12.5px; min-width:16px; text-align:right;">{{ course.student_count }}</span>
+            </div>
+          </td>
         </tr>
-        {% empty %}
-        <tr><td colspan="2" style="color: var(--text-muted);">No courses yet. Add one from the admin panel to see it here.</td></tr>
         {% endfor %}
       </tbody>
     </table>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">▦</div>
+      <p class="empty-state-text">No courses yet. Add one from the admin panel to see it here.</p>
+    </div>
+    {% endif %}
   </div>
 
   <div class="card">
     <div class="section-title">Recent submissions</div>
     <div class="row-list">
       {% for s in recent_submissions %}
-      <div class="row-item">
+      <a href="{% url 'submission_detail' s.pk %}" class="row-item">
         <div>
           <div class="row-title">{{ s.student.user.get_full_name|default:s.student.user.username }}</div>
           <div class="row-sub">{{ s.assignment.title }}</div>
@@ -52,9 +65,12 @@
         <span class="badge {% if s.status == 'PASSED' %}badge-pass{% elif s.status == 'FAILED' or s.status == 'ERROR' %}badge-fail{% else %}badge-warn{% endif %}">
           {{ s.get_status_display }}
         </span>
-      </div>
+      </a>
       {% empty %}
-      <p style="color: var(--text-muted); font-size: 13.5px;">No submissions yet.</p>
+      <div class="empty-state">
+        <div class="empty-state-icon">◧</div>
+        <p class="empty-state-text">No submissions yet.</p>
+      </div>
       {% endfor %}
     </div>
   </div>

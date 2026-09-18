@@ -23,7 +23,8 @@
   </script>
 </head>
 <body>
-  <div class="shell">
+  <div class="shell" id="appShell">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
     <aside class="sidebar">
       <div class="sidebar-brand">
         <div class="sidebar-mark">&lt;/&gt;</div>
@@ -50,9 +51,12 @@
 
     <div class="main">
       <div class="topbar">
-        <div>
-          <h1>{% block page_title %}Dashboard{% endblock %}</h1>
-          {% block page_subtitle %}<p>{% now "l, F j, Y" %}</p>{% endblock %}
+        <div class="topbar-left">
+          <button type="button" class="menu-toggle" id="sidebarToggle" aria-label="Open menu" aria-expanded="false">☰</button>
+          <div>
+            <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+            {% block page_subtitle %}<p>{% now "l, F j, Y" %}</p>{% endblock %}
+          </div>
         </div>
         <div style="display:flex; align-items:center; gap:14px;">
           {% block topbar_extra %}{% endblock %}
@@ -74,5 +78,30 @@
       </div>
     </div>
   </div>
+  <script>
+    (function () {
+      var shell = document.getElementById('appShell');
+      var toggle = document.getElementById('sidebarToggle');
+      var overlay = document.getElementById('sidebarOverlay');
+      if (!shell || !toggle || !overlay) return;
+
+      function closeSidebar() {
+        shell.classList.remove('sidebar-open');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+      toggle.addEventListener('click', function () {
+        var isOpen = shell.classList.toggle('sidebar-open');
+        toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+      overlay.addEventListener('click', closeSidebar);
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeSidebar();
+      });
+      // Close automatically after navigating (mobile drawer shouldn't persist across pages)
+      shell.querySelectorAll('.sidebar-link').forEach(function (link) {
+        link.addEventListener('click', closeSidebar);
+      });
+    })();
+  </script>
 </body>
 </html>
