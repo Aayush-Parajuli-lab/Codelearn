@@ -28,8 +28,8 @@ Built with **Django** and **scikit-learn**.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>
+git clonehttps://github.com/Aayush-Parajuli-lab/Codelearn.git
+cd Codelearn
 ```
 
 ### 2. Set up a virtual environment and install dependencies
@@ -66,12 +66,12 @@ Visit `http://127.0.0.1:8000/` in your browser.
 
 ### Demo login (if you ran `demo_pipeline`)
 
-| Role | Username | Password |
-|------|----------|----------|
-| Admin | `admin1` | `pass1234` |
+| Role    | Username   | Password   |
+| ------- | ---------- | ---------- |
+| Admin   | `admin1`   | `pass1234` |
 | Teacher | `teacher1` | `pass1234` |
 | Student | `student0` | `pass1234` |
-| Parent | `parent1` | `pass1234` |
+| Parent  | `parent1`  | `pass1234` |
 
 ## Running with Docker / Podman
 
