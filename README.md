@@ -28,7 +28,7 @@ Built with **Django** and **scikit-learn**.
 ### 1. Clone the repository
 
 ```bash
-git clonehttps://github.com/Aayush-Parajuli-lab/Codelearn.git
+git clone https://github.com/Aayush-Parajuli-lab/Codelearn.git
 cd Codelearn
 ```
 
