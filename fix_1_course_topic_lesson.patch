@@ -1,0 +1,593 @@
+--- a/campus/forms.py
++++ b/campus/forms.py
+@@ -5,7 +5,7 @@
+ from django.contrib.auth.password_validation import validate_password
+ from django.core.exceptions import ValidationError
+ 
+-from academics.models import SchoolClass
++from academics.models import SchoolClass, Subject, Course, Topic, Lesson
+ from accounts.models import Student, User
+ from quizzes.models import Quiz, Question, AnswerOption
+ 
+@@ -189,3 +189,77 @@
+         widgets = {
+             "text": forms.TextInput(attrs={"class": "field-input", "placeholder": "Option text"}),
+         }
++
++
++class SchoolClassCreateForm(forms.ModelForm):
++    class Meta:
++        model = SchoolClass
++        fields = ["name", "section", "academic_year"]
++        widgets = {
++            "name": forms.TextInput(attrs={"class": "field-input", "placeholder": "e.g. BCA 5th Sem"}),
++            "section": forms.TextInput(attrs={"class": "field-input", "placeholder": "Optional, e.g. A"}),
++            "academic_year": forms.TextInput(attrs={"class": "field-input", "placeholder": "e.g. 2025-26"}),
++        }
++
++
++class SubjectCreateForm(forms.ModelForm):
++    class Meta:
++        model = Subject
++        fields = ["name", "code"]
++        widgets = {
++            "name": forms.TextInput(attrs={"class": "field-input", "placeholder": "e.g. Programming Fundamentals"}),
++            "code": forms.TextInput(attrs={"class": "field-input", "placeholder": "e.g. CSC101 (must be unique)"}),
++        }
++
++
++class CourseCreateForm(forms.ModelForm):
++    class Meta:
++        model = Course
++        fields = ["title", "subject", "teacher", "school_classes", "programming_language", "description"]
++        widgets = {
++            "title": forms.TextInput(attrs={"class": "field-input"}),
++            "subject": forms.Select(attrs={"class": "field-input"}),
++            "teacher": forms.Select(attrs={"class": "field-input"}),
++            "school_classes": forms.SelectMultiple(attrs={"class": "field-input", "size": 4}),
++            "programming_language": forms.Select(attrs={"class": "field-input"}),
++            "description": forms.Textarea(attrs={"class": "field-input", "rows": 3}),
++        }
++
++    def __init__(self, *args, **kwargs):
++        super().__init__(*args, **kwargs)
++        self.fields["teacher"].required = False
++        self.fields["school_classes"].required = False
++        self.fields["description"].required = False
++
++
++class TopicCreateForm(forms.ModelForm):
++    class Meta:
++        model = Topic
++        fields = ["name", "order"]
++        widgets = {
++            "name": forms.TextInput(attrs={"class": "field-input", "placeholder": "e.g. Loops"}),
++            "order": forms.NumberInput(attrs={"class": "field-input", "min": 0}),
++        }
++
++    def __init__(self, *args, **kwargs):
++        super().__init__(*args, **kwargs)
++        self.fields["order"].required = False
++        self.fields["order"].initial = 0
++
++
++class LessonCreateForm(forms.ModelForm):
++    class Meta:
++        model = Lesson
++        fields = ["title", "content", "example_code", "order"]
++        widgets = {
++            "title": forms.TextInput(attrs={"class": "field-input"}),
++            "content": forms.Textarea(attrs={"class": "field-input", "rows": 6, "placeholder": "Lesson text (plain text/markdown)"}),
++            "example_code": forms.Textarea(attrs={"class": "field-input font-mono", "rows": 5}),
++            "order": forms.NumberInput(attrs={"class": "field-input", "min": 0}),
++        }
++
++    def __init__(self, *args, **kwargs):
++        super().__init__(*args, **kwargs)
++        self.fields["example_code"].required = False
++        self.fields["order"].required = False
++        self.fields["order"].initial = 0
+--- a/campus/views.py
++++ b/campus/views.py
+@@ -10,14 +10,15 @@
+ from django.utils import timezone
+ 
+ from accounts.models import User, Student, Teacher, Parent
+-from academics.models import Course, SchoolClass, Topic, ForumPost
++from academics.models import Course, SchoolClass, Subject, Topic, Lesson, ForumPost
+ from assignments.models import Assignment, Submission
+ from attendance.models import AttendanceRecord
+ from ml_engine.models import StudentTopicFeature, Recommendation
+ from campus.forms import (
+     UserCreateForm, generate_temp_password, ProfileUpdateForm, ThemeForm,
+     NotificationsForm, CSVImportForm, QuizCreateForm, QuestionCreateForm,
+-    AnswerOptionCreateForm,
++    AnswerOptionCreateForm, SchoolClassCreateForm, SubjectCreateForm,
++    CourseCreateForm, TopicCreateForm, LessonCreateForm,
+ )
+ from django.contrib.auth.password_validation import validate_password
+ from django.core.exceptions import ValidationError
+@@ -613,6 +614,78 @@
+ # Courses (Admin sees all, Teacher sees their own)
+ # ---------------------------------------------------------------------------
+ 
++# ---------------------------------------------------------------------------
++# Course / class / subject creation (Admin) — previously /admin/-only
++# ---------------------------------------------------------------------------
++
++@login_required
++def class_subject_manage(request):
++    if not _role_required(request.user, User.Role.ADMIN):
++        return redirect("dashboard")
++
++    class_form = SchoolClassCreateForm()
++    subject_form = SubjectCreateForm()
++
++    if request.method == "POST":
++        action = request.POST.get("action")
++
++        if action == "add_class":
++            class_form = SchoolClassCreateForm(request.POST)
++            if class_form.is_valid():
++                class_form.save()
++                messages.success(request, "Class added.")
++                return redirect("class_subject_manage")
++
++        elif action == "delete_class":
++            SchoolClass.objects.filter(pk=request.POST.get("class_id")).delete()
++            return redirect("class_subject_manage")
++
++        elif action == "add_subject":
++            subject_form = SubjectCreateForm(request.POST)
++            if subject_form.is_valid():
++                subject_form.save()
++                messages.success(request, "Subject added.")
++                return redirect("class_subject_manage")
++
++        elif action == "delete_subject":
++            Subject.objects.filter(pk=request.POST.get("subject_id")).delete()
++            return redirect("class_subject_manage")
++
++    context = {
++        "nav_items": _nav_for(request, "Courses"),
++        "classes": SchoolClass.objects.all(),
++        "subjects": Subject.objects.all(),
++        "class_form": class_form,
++        "subject_form": subject_form,
++    }
++    return render(request, "campus/class_subject_manage.html", context)
++
++
++@login_required
++def course_create(request):
++    if not _role_required(request.user, User.Role.ADMIN):
++        return redirect("dashboard")
++
++    if request.method == "POST":
++        form = CourseCreateForm(request.POST)
++        if form.is_valid():
++            course = form.save()
++            messages.success(request, f"Course \u201c{course.title}\u201d created \u2014 now add some topics.")
++            return redirect("course_topics", pk=course.pk)
++    else:
++        form = CourseCreateForm()
++
++    no_subjects = not Subject.objects.exists()
++    no_teachers = not Teacher.objects.exists()
++    context = {
++        "nav_items": _nav_for(request, "Courses"),
++        "form": form,
++        "no_subjects": no_subjects,
++        "no_teachers": no_teachers,
++    }
++    return render(request, "campus/course_create.html", context)
++
++
+ @login_required
+ def course_list(request):
+     role = request.user.role
+@@ -652,16 +725,87 @@
+     if not _user_can_access_course(request.user, course):
+         return redirect("dashboard")
+ 
++    can_manage = request.user.role in (User.Role.ADMIN, User.Role.TEACHER)
++    topic_form = TopicCreateForm()
++
++    if request.method == "POST" and can_manage:
++        action = request.POST.get("action")
++        if action == "add_topic":
++            topic_form = TopicCreateForm(request.POST)
++            if topic_form.is_valid():
++                topic = topic_form.save(commit=False)
++                topic.course = course
++                topic.save()
++                messages.success(request, f"Topic \u201c{topic.name}\u201d added.")
++                return redirect("course_topics", pk=course.pk)
++        elif action == "delete_topic":
++            Topic.objects.filter(pk=request.POST.get("topic_id"), course=course).delete()
++            messages.success(request, "Topic removed.")
++            return redirect("course_topics", pk=course.pk)
++
+     topics = course.topics.annotate(
+         lesson_count=Count("lessons", distinct=True),
+         post_count=Count("forum_posts", distinct=True),
+     )
+     active_label = "Courses" if request.user.role == User.Role.ADMIN else "My courses"
+-    context = {"nav_items": _nav_for(request, active_label), "course": course, "topics": topics}
++    context = {
++        "nav_items": _nav_for(request, active_label),
++        "course": course,
++        "topics": topics,
++        "can_manage": can_manage,
++        "topic_form": topic_form,
++    }
+     return render(request, "campus/course_topics.html", context)
+ 
+ 
+ @login_required
++def topic_lessons(request, pk):
++    topic = get_object_or_404(Topic.objects.select_related("course"), pk=pk)
++    if not _user_can_access_course(request.user, topic.course):
++        return redirect("dashboard")
++
++    can_manage = request.user.role in (User.Role.ADMIN, User.Role.TEACHER)
++    lesson_form = LessonCreateForm()
++
++    if request.method == "POST" and can_manage:
++        action = request.POST.get("action")
++        if action == "add_lesson":
++            lesson_form = LessonCreateForm(request.POST)
++            if lesson_form.is_valid():
++                lesson = lesson_form.save(commit=False)
++                lesson.topic = topic
++                lesson.save()
++                messages.success(request, f"Lesson \u201c{lesson.title}\u201d added.")
++                return redirect("topic_lessons", pk=topic.pk)
++        elif action == "delete_lesson":
++            Lesson.objects.filter(pk=request.POST.get("lesson_id"), topic=topic).delete()
++            messages.success(request, "Lesson removed.")
++            return redirect("topic_lessons", pk=topic.pk)
++
++    lessons = topic.lessons.all()
++    active_label = "Courses" if request.user.role == User.Role.ADMIN else "My courses"
++    context = {
++        "nav_items": _nav_for(request, active_label),
++        "topic": topic,
++        "lessons": lessons,
++        "can_manage": can_manage,
++        "lesson_form": lesson_form,
++    }
++    return render(request, "campus/topic_lessons.html", context)
++
++
++@login_required
++def lesson_detail(request, pk):
++    lesson = get_object_or_404(Lesson.objects.select_related("topic__course"), pk=pk)
++    if not _user_can_access_course(request.user, lesson.topic.course):
++        return redirect("dashboard")
++
++    active_label = "Courses" if request.user.role == User.Role.ADMIN else "My courses"
++    context = {"nav_items": _nav_for(request, active_label), "lesson": lesson}
++    return render(request, "campus/lesson_detail.html", context)
++
++
++@login_required
+ def topic_forum(request, pk):
+     topic = get_object_or_404(Topic.objects.select_related("course"), pk=pk)
+     if not _user_can_access_course(request.user, topic.course):
+--- a/campus/urls.py
++++ b/campus/urls.py
+@@ -16,9 +16,13 @@
+     path("users/import/template/", views.user_import_template, name="user_import_template"),
+ 
+     # Courses (admin/teacher/student, filtered by role in the view)
++    path("classes/manage/", views.class_subject_manage, name="class_subject_manage"),
++    path("courses/create/", views.course_create, name="course_create"),
+     path("courses/", views.course_list, name="course_list"),
+     path("courses/<int:pk>/topics/", views.course_topics, name="course_topics"),
+     path("topics/<int:pk>/forum/", views.topic_forum, name="topic_forum"),
++    path("topics/<int:pk>/lessons/", views.topic_lessons, name="topic_lessons"),
++    path("lessons/<int:pk>/", views.lesson_detail, name="lesson_detail"),
+ 
+     # Assignments
+     path("assignments/", views.assignment_list, name="assignment_list"),
+--- a/campus/templates/campus/course_list.html
++++ b/campus/templates/campus/course_list.html
+@@ -1,6 +1,12 @@
+ {% extends "campus/base.html" %}
+ {% block title %}Courses — CodeLearn{% endblock %}
+ {% block page_title %}{% if role == "ADMIN" %}Courses{% else %}My courses{% endif %}{% endblock %}
++{% block topbar_extra %}
++{% if role == "ADMIN" %}
++<a href="{% url 'class_subject_manage' %}" class="btn btn-outline">Classes &amp; subjects</a>
++<a href="{% url 'course_create' %}" class="btn btn-primary">+ Create course</a>
++{% endif %}
++{% endblock %}
+ 
+ {% block content %}
+ <div class="card">
+--- a/campus/templates/campus/course_topics.html
++++ b/campus/templates/campus/course_topics.html
+@@ -5,20 +5,51 @@
+ 
+ {% block content %}
+ <div class="card">
++  {% if topics %}
+   <table class="table">
+-    <thead><tr><th>Topic</th><th>Lessons</th><th>Discussion posts</th><th></th></tr></thead>
++    <thead><tr><th>Topic</th><th>Lessons</th><th>Discussion posts</th><th colspan="2"></th></tr></thead>
+     <tbody>
+       {% for t in topics %}
+       <tr>
+         <td>{{ t.name }}</td>
+         <td class="font-mono">{{ t.lesson_count }}</td>
+         <td class="font-mono">{{ t.post_count }}</td>
+-        <td><a href="{% url 'topic_forum' t.id %}" class="btn btn-outline">Open discussion</a></td>
++        <td><a href="{% url 'topic_lessons' t.id %}" class="btn btn-outline">Lessons</a></td>
++        <td>
++          <a href="{% url 'topic_forum' t.id %}" class="btn btn-outline">Discussion</a>
++          {% if can_manage %}
++          <form method="post" style="display:inline;" onsubmit="return confirm('Remove this topic and everything under it (lessons, assignments, quizzes)?');">
++            {% csrf_token %}
++            <input type="hidden" name="action" value="delete_topic">
++            <input type="hidden" name="topic_id" value="{{ t.id }}">
++            <button type="submit" class="btn btn-outline" style="color: var(--fail); border-color: var(--fail);">Remove</button>
++          </form>
++          {% endif %}
++        </td>
+       </tr>
+-      {% empty %}
+-      <tr><td colspan="4" style="color: var(--text-muted);">No topics yet.</td></tr>
+       {% endfor %}
+     </tbody>
+   </table>
++  {% else %}
++  <div class="empty-state">
++    <div class="empty-state-icon">▤</div>
++    <p class="empty-state-text">No topics yet.</p>
++  </div>
++  {% endif %}
+ </div>
++
++{% if can_manage %}
++<div class="card" style="margin-top: 16px; max-width: 480px;">
++  <div class="section-title">Add a topic</div>
++  <form method="post">
++    {% csrf_token %}
++    <input type="hidden" name="action" value="add_topic">
++    <label class="field-label" for="id_name">Topic name</label>
++    <input class="field-input" type="text" name="name" id="id_name" placeholder="e.g. Loops" required>
++    <label class="field-label" for="id_order">Order (lower shows first)</label>
++    <input class="field-input" type="number" min="0" name="order" id="id_order" value="0" style="max-width: 120px;">
++    <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Add topic</button>
++  </form>
++</div>
++{% endif %}
+ {% endblock %}
+--- a/campus/templates/campus/student_dashboard.html
++++ b/campus/templates/campus/student_dashboard.html
+@@ -55,7 +55,7 @@
+           <div class="row-title">{{ r.recommended_lesson.title|default:"Practice exercise" }}</div>
+           <div class="row-sub">{{ r.topic.name }} &middot; {{ r.reason }}</div>
+         </div>
+-        <a href="{% url 'course_topics' r.topic.course_id %}" class="btn btn-outline">Continue</a>
++        <a href="{% if r.recommended_lesson_id %}{% url 'lesson_detail' r.recommended_lesson_id %}{% else %}{% url 'course_topics' r.topic.course_id %}{% endif %}" class="btn btn-outline">Continue</a>
+       </div>
+       {% empty %}
+       <div class="empty-state">
+--- a/campus/templates/campus/class_subject_manage.html
++++ b/campus/templates/campus/class_subject_manage.html
+@@ -0,0 +1,70 @@
++{% extends "campus/base.html" %}
++{% block title %}Classes & subjects — CodeLearn{% endblock %}
++{% block page_title %}Classes &amp; subjects{% endblock %}
++{% block page_subtitle %}<p>These are the building blocks a course needs before you can create one</p>{% endblock %}
++
++{% block content %}
++<div class="grid grid-2">
++  <div class="card">
++    <div class="section-title">School classes</div>
++    <div class="row-list" style="margin-bottom: 14px;">
++      {% for c in classes %}
++      <div class="row-item">
++        <span>{{ c.name }} {{ c.section }} <span class="row-sub">({{ c.academic_year }})</span></span>
++        <form method="post" onsubmit="return confirm('Delete this class?');">
++          {% csrf_token %}
++          <input type="hidden" name="action" value="delete_class">
++          <input type="hidden" name="class_id" value="{{ c.id }}">
++          <button type="submit" class="btn btn-outline" style="padding: 3px 10px; font-size: 12px;">Remove</button>
++        </form>
++      </div>
++      {% empty %}
++      <div class="empty-state"><div class="empty-state-icon">▦</div><p class="empty-state-text">No classes yet.</p></div>
++      {% endfor %}
++    </div>
++    <form method="post">
++      {% csrf_token %}
++      <input type="hidden" name="action" value="add_class">
++      <label class="field-label" for="id_name">Name</label>
++      <input class="field-input" type="text" name="name" id="id_name" placeholder="e.g. BCA 5th Sem" required>
++      <label class="field-label" for="id_section">Section</label>
++      <input class="field-input" type="text" name="section" id="id_section" placeholder="Optional">
++      <label class="field-label" for="id_academic_year">Academic year</label>
++      <input class="field-input" type="text" name="academic_year" id="id_academic_year" placeholder="e.g. 2025-26" required>
++      <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Add class</button>
++    </form>
++  </div>
++
++  <div class="card">
++    <div class="section-title">Subjects</div>
++    <div class="row-list" style="margin-bottom: 14px;">
++      {% for s in subjects %}
++      <div class="row-item">
++        <span>{{ s.name }} <span class="row-sub font-mono">{{ s.code }}</span></span>
++        <form method="post" onsubmit="return confirm('Delete this subject?');">
++          {% csrf_token %}
++          <input type="hidden" name="action" value="delete_subject">
++          <input type="hidden" name="subject_id" value="{{ s.id }}">
++          <button type="submit" class="btn btn-outline" style="padding: 3px 10px; font-size: 12px;">Remove</button>
++        </form>
++      </div>
++      {% empty %}
++      <div class="empty-state"><div class="empty-state-icon">▦</div><p class="empty-state-text">No subjects yet.</p></div>
++      {% endfor %}
++    </div>
++    <form method="post">
++      {% csrf_token %}
++      <input type="hidden" name="action" value="add_subject">
++      <label class="field-label" for="id_sname">Name</label>
++      <input class="field-input" type="text" name="name" id="id_sname" placeholder="e.g. Programming Fundamentals" required>
++      <label class="field-label" for="id_code">Code</label>
++      <input class="field-input" type="text" name="code" id="id_code" placeholder="e.g. CSC101 (must be unique)" required>
++      <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Add subject</button>
++    </form>
++  </div>
++</div>
++
++<div style="margin-top: 16px;">
++  <a href="{% url 'course_create' %}" class="btn btn-outline">&larr; Back to create course</a>
++</div>
++{% endblock %}
+--- a/campus/templates/campus/course_create.html
++++ b/campus/templates/campus/course_create.html
+@@ -0,0 +1,60 @@
++{% extends "campus/base.html" %}
++{% block title %}Create course — CodeLearn{% endblock %}
++{% block page_title %}Create a course{% endblock %}
++
++{% block content %}
++{% if no_subjects or no_teachers %}
++<div class="card" style="margin-bottom: 16px; border-color: var(--warn);">
++  <p style="margin:0;">
++    {% if no_subjects %}You don't have any Subjects yet. {% endif %}
++    {% if no_teachers %}You don't have any Teacher accounts yet ("Add user" &rarr; Teacher). {% endif %}
++    {% if no_subjects %}<a href="{% url 'class_subject_manage' %}">Add a subject first &rarr;</a>{% endif %}
++  </p>
++</div>
++{% endif %}
++
++<div class="card" style="max-width: 600px;">
++  <form method="post" novalidate>
++    {% csrf_token %}
++
++    <label class="field-label" for="id_title">Course title</label>
++    <input class="field-input" type="text" name="title" id="id_title" value="{{ form.title.value|default:'' }}" required>
++
++    <label class="field-label" for="id_subject">Subject</label>
++    <select name="subject" id="id_subject" class="field-input">
++      <option value="">— Select a subject —</option>
++      {% for s in form.fields.subject.queryset %}
++        <option value="{{ s.id }}">{{ s.name }} ({{ s.code }})</option>
++      {% endfor %}
++    </select>
++    {% if form.subject.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ form.subject.errors|join:", " }}</p>{% endif %}
++
++    <label class="field-label" for="id_teacher">Teacher</label>
++    <select name="teacher" id="id_teacher" class="field-input">
++      <option value="">— Unassigned —</option>
++      {% for t in form.fields.teacher.queryset %}
++        <option value="{{ t.id }}">{{ t.user.get_full_name|default:t.user.username }}</option>
++      {% endfor %}
++    </select>
++
++    <label class="field-label" for="id_school_classes">School classes (optional, ctrl/cmd-click for multiple)</label>
++    <select name="school_classes" id="id_school_classes" class="field-input" multiple size="4">
++      {% for c in form.fields.school_classes.queryset %}
++        <option value="{{ c.id }}">{{ c.name }} {{ c.section }}</option>
++      {% endfor %}
++    </select>
++
++    <label class="field-label" for="id_programming_language">Programming language</label>
++    <select name="programming_language" id="id_programming_language" class="field-input">
++      {% for value, label in form.fields.programming_language.choices %}
++        <option value="{{ value }}">{{ label }}</option>
++      {% endfor %}
++    </select>
++
++    <label class="field-label" for="id_description">Description (optional)</label>
++    <textarea class="field-input" name="description" id="id_description" rows="3"></textarea>
++
++    <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Create course</button>
++  </form>
++</div>
++{% endblock %}
+--- a/campus/templates/campus/topic_lessons.html
++++ b/campus/templates/campus/topic_lessons.html
+@@ -0,0 +1,55 @@
++{% extends "campus/base.html" %}
++{% block title %}{{ topic.name }} lessons — CodeLearn{% endblock %}
++{% block page_title %}{{ topic.name }}{% endblock %}
++{% block page_subtitle %}<p>{{ topic.course.title }} &middot; Lessons</p>{% endblock %}
++
++{% block content %}
++<div class="card">
++  {% if lessons %}
++  <div class="row-list">
++    {% for l in lessons %}
++    <div class="row-item">
++      <a href="{% url 'lesson_detail' l.id %}" class="row-title" style="text-decoration:none; color:inherit;">{{ l.title }}</a>
++      {% if can_manage %}
++      <form method="post" onsubmit="return confirm('Remove this lesson?');" style="display:inline;">
++        {% csrf_token %}
++        <input type="hidden" name="action" value="delete_lesson">
++        <input type="hidden" name="lesson_id" value="{{ l.id }}">
++        <button type="submit" class="btn btn-outline" style="padding: 3px 10px; font-size: 12px;">Remove</button>
++      </form>
++      {% endif %}
++    </div>
++    {% endfor %}
++  </div>
++  {% else %}
++  <div class="empty-state">
++    <div class="empty-state-icon">▤</div>
++    <p class="empty-state-text">No lessons yet.</p>
++  </div>
++  {% endif %}
++</div>
++
++{% if can_manage %}
++<div class="card" style="margin-top: 16px; max-width: 640px;">
++  <div class="section-title">Add a lesson</div>
++  <form method="post">
++    {% csrf_token %}
++    <input type="hidden" name="action" value="add_lesson">
++
++    <label class="field-label" for="id_title">Title</label>
++    <input class="field-input" type="text" name="title" id="id_title" required>
++
++    <label class="field-label" for="id_content">Content</label>
++    <textarea class="field-input" name="content" id="id_content" rows="6" required></textarea>
++
++    <label class="field-label" for="id_example_code">Example code (optional)</label>
++    <textarea class="field-input font-mono" name="example_code" id="id_example_code" rows="5"></textarea>
++
++    <label class="field-label" for="id_order">Order (lower shows first)</label>
++    <input class="field-input" type="number" min="0" name="order" id="id_order" value="0" style="max-width: 120px;">
++
++    <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Add lesson</button>
++  </form>
++</div>
++{% endif %}
++{% endblock %}
+--- a/campus/templates/campus/lesson_detail.html
++++ b/campus/templates/campus/lesson_detail.html
+@@ -0,0 +1,19 @@
++{% extends "campus/base.html" %}
++{% block title %}{{ lesson.title }} — CodeLearn{% endblock %}
++{% block page_title %}{{ lesson.title }}{% endblock %}
++{% block page_subtitle %}<p>{{ lesson.topic.course.title }} &middot; {{ lesson.topic.name }}</p>{% endblock %}
++
++{% block content %}
++<div class="card" style="max-width: 760px;">
++  <div style="white-space: pre-wrap; line-height: 1.6;">{{ lesson.content }}</div>
++
++  {% if lesson.example_code %}
++  <div class="section-title" style="margin-top: 20px;">Example</div>
++  <pre class="font-mono" style="background: var(--paper-dim); padding: 12px 14px; border-radius: var(--radius); overflow-x: auto; font-size: 13px;">{{ lesson.example_code }}</pre>
++  {% endif %}
++</div>
++
++<div style="margin-top: 16px;">
++  <a href="{% url 'topic_lessons' lesson.topic_id %}" class="btn btn-outline">&larr; Back to {{ lesson.topic.name }}</a>
++</div>
++{% endblock %}
