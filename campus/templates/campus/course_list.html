@@ -1,6 +1,12 @@
 {% extends "campus/base.html" %}
 {% block title %}Courses — CodeLearn{% endblock %}
 {% block page_title %}{% if role == "ADMIN" %}Courses{% else %}My courses{% endif %}{% endblock %}
+{% block topbar_extra %}
+{% if role == "ADMIN" %}
+<a href="{% url 'class_subject_manage' %}" class="btn btn-outline">Classes &amp; subjects</a>
+<a href="{% url 'course_create' %}" class="btn btn-primary">+ Create course</a>
+{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="card">

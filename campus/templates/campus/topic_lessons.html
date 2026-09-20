@@ -1,0 +1,55 @@
+{% extends "campus/base.html" %}
+{% block title %}{{ topic.name }} lessons — CodeLearn{% endblock %}
+{% block page_title %}{{ topic.name }}{% endblock %}
+{% block page_subtitle %}<p>{{ topic.course.title }} &middot; Lessons</p>{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% if lessons %}
+  <div class="row-list">
+    {% for l in lessons %}
+    <div class="row-item">
+      <a href="{% url 'lesson_detail' l.id %}" class="row-title" style="text-decoration:none; color:inherit;">{{ l.title }}</a>
+      {% if can_manage %}
+      <form method="post" onsubmit="return confirm('Remove this lesson?');" style="display:inline;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete_lesson">
+        <input type="hidden" name="lesson_id" value="{{ l.id }}">
+        <button type="submit" class="btn btn-outline" style="padding: 3px 10px; font-size: 12px;">Remove</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">▤</div>
+    <p class="empty-state-text">No lessons yet.</p>
+  </div>
+  {% endif %}
+</div>
+
+{% if can_manage %}
+<div class="card" style="margin-top: 16px; max-width: 640px;">
+  <div class="section-title">Add a lesson</div>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_lesson">
+
+    <label class="field-label" for="id_title">Title</label>
+    <input class="field-input" type="text" name="title" id="id_title" required>
+
+    <label class="field-label" for="id_content">Content</label>
+    <textarea class="field-input" name="content" id="id_content" rows="6" required></textarea>
+
+    <label class="field-label" for="id_example_code">Example code (optional)</label>
+    <textarea class="field-input font-mono" name="example_code" id="id_example_code" rows="5"></textarea>
+
+    <label class="field-label" for="id_order">Order (lower shows first)</label>
+    <input class="field-input" type="number" min="0" name="order" id="id_order" value="0" style="max-width: 120px;">
+
+    <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Add lesson</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

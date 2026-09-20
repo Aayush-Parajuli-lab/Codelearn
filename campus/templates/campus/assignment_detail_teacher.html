@@ -12,8 +12,9 @@
 
 <div class="card" style="margin-bottom: 16px;">
   <div class="section-title">Test cases</div>
+  {% if test_cases %}
   <table class="table">
-    <thead><tr><th>Input</th><th>Expected output</th><th>Visibility</th><th>Weight</th></tr></thead>
+    <thead><tr><th>Input</th><th>Expected output</th><th>Visibility</th><th>Weight</th>{% if can_manage %}<th></th>{% endif %}</tr></thead>
     <tbody>
       {% for tc in test_cases %}
       <tr>
@@ -21,10 +22,53 @@
         <td class="font-mono">{{ tc.expected_output }}</td>
         <td><span class="badge badge-neutral">{% if tc.is_hidden %}Hidden{% else %}Visible{% endif %}</span></td>
         <td class="font-mono">{{ tc.weight }}</td>
+        {% if can_manage %}
+        <td>
+          <form method="post" onsubmit="return confirm('Remove this test case?');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_test_case">
+            <input type="hidden" name="test_case_id" value="{{ tc.id }}">
+            <button type="submit" class="btn btn-outline" style="padding: 3px 10px; font-size: 12px;">Remove</button>
+          </form>
+        </td>
+        {% endif %}
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">▤</div>
+    <p class="empty-state-text">No test cases yet — students can't be graded until you add at least one.</p>
+  </div>
+  {% endif %}
+
+  {% if can_manage %}
+  <form method="post" style="margin-top: 14px; border-top: 1px solid var(--line); padding-top: 14px;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_test_case">
+    <div class="grid grid-2" style="gap: 12px;">
+      <div>
+        <label class="field-label" for="id_input_data">Input (optional)</label>
+        <textarea class="field-input font-mono" name="input_data" id="id_input_data" rows="2"></textarea>
+      </div>
+      <div>
+        <label class="field-label" for="id_expected_output">Expected output</label>
+        <textarea class="field-input font-mono" name="expected_output" id="id_expected_output" rows="2" required></textarea>
+      </div>
+    </div>
+    <div style="display:flex; align-items:center; gap: 16px; margin-top: 4px;">
+      <label style="display:flex; align-items:center; gap:6px; font-size: 13px;">
+        <input type="checkbox" name="is_hidden" checked> Hidden from students
+      </label>
+      <div>
+        <label class="field-label" for="id_weight" style="margin-bottom: 2px;">Weight</label>
+        <input class="field-input" type="number" step="0.1" min="0.1" name="weight" id="id_weight" value="1.0" style="max-width: 90px;">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary" style="margin-top: 10px;">Add test case</button>
+  </form>
+  {% endif %}
 </div>
 
 <div class="card">

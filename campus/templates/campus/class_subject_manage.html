@@ -1,0 +1,70 @@
+{% extends "campus/base.html" %}
+{% block title %}Classes & subjects — CodeLearn{% endblock %}
+{% block page_title %}Classes &amp; subjects{% endblock %}
+{% block page_subtitle %}<p>These are the building blocks a course needs before you can create one</p>{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="section-title">School classes</div>
+    <div class="row-list" style="margin-bottom: 14px;">
+      {% for c in classes %}
+      <div class="row-item">
+        <span>{{ c.name }} {{ c.section }} <span class="row-sub">({{ c.academic_year }})</span></span>
+        <form method="post" onsubmit="return confirm('Delete this class?');">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_class">
+          <input type="hidden" name="class_id" value="{{ c.id }}">
+          <button type="submit" class="btn btn-outline" style="padding: 3px 10px; font-size: 12px;">Remove</button>
+        </form>
+      </div>
+      {% empty %}
+      <div class="empty-state"><div class="empty-state-icon">▦</div><p class="empty-state-text">No classes yet.</p></div>
+      {% endfor %}
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_class">
+      <label class="field-label" for="id_name">Name</label>
+      <input class="field-input" type="text" name="name" id="id_name" placeholder="e.g. BCA 5th Sem" required>
+      <label class="field-label" for="id_section">Section</label>
+      <input class="field-input" type="text" name="section" id="id_section" placeholder="Optional">
+      <label class="field-label" for="id_academic_year">Academic year</label>
+      <input class="field-input" type="text" name="academic_year" id="id_academic_year" placeholder="e.g. 2025-26" required>
+      <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Add class</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Subjects</div>
+    <div class="row-list" style="margin-bottom: 14px;">
+      {% for s in subjects %}
+      <div class="row-item">
+        <span>{{ s.name }} <span class="row-sub font-mono">{{ s.code }}</span></span>
+        <form method="post" onsubmit="return confirm('Delete this subject?');">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_subject">
+          <input type="hidden" name="subject_id" value="{{ s.id }}">
+          <button type="submit" class="btn btn-outline" style="padding: 3px 10px; font-size: 12px;">Remove</button>
+        </form>
+      </div>
+      {% empty %}
+      <div class="empty-state"><div class="empty-state-icon">▦</div><p class="empty-state-text">No subjects yet.</p></div>
+      {% endfor %}
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_subject">
+      <label class="field-label" for="id_sname">Name</label>
+      <input class="field-input" type="text" name="name" id="id_sname" placeholder="e.g. Programming Fundamentals" required>
+      <label class="field-label" for="id_code">Code</label>
+      <input class="field-input" type="text" name="code" id="id_code" placeholder="e.g. CSC101 (must be unique)" required>
+      <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Add subject</button>
+    </form>
+  </div>
+</div>
+
+<div style="margin-top: 16px;">
+  <a href="{% url 'course_create' %}" class="btn btn-outline">&larr; Back to create course</a>
+</div>
+{% endblock %}

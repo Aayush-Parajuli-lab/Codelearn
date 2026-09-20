@@ -55,7 +55,7 @@
           <div class="row-title">{{ r.recommended_lesson.title|default:"Practice exercise" }}</div>
           <div class="row-sub">{{ r.topic.name }} &middot; {{ r.reason }}</div>
         </div>
-        <a href="{% url 'course_topics' r.topic.course_id %}" class="btn btn-outline">Continue</a>
+        <a href="{% if r.recommended_lesson_id %}{% url 'lesson_detail' r.recommended_lesson_id %}{% else %}{% url 'course_topics' r.topic.course_id %}{% endif %}" class="btn btn-outline">Continue</a>
       </div>
       {% empty %}
       <div class="empty-state">

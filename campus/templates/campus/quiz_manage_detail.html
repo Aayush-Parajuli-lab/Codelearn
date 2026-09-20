@@ -1,0 +1,103 @@
+{% extends "campus/base.html" %}
+{% block title %}{{ quiz.title }} — CodeLearn{% endblock %}
+{% block page_title %}{{ quiz.title }}{% endblock %}
+{% block page_subtitle %}<p>{{ quiz.topic.course.title }} &middot; {{ quiz.topic.name }} &middot; {{ quiz.time_limit_minutes }} min{% if quiz.due_date %} &middot; due {{ quiz.due_date|date:"M j, Y g:i A" }}{% endif %}</p>{% endblock %}
+{% block topbar_extra %}
+<form method="post" onsubmit="return confirm('Delete this quiz and all its questions? This cannot be undone.');" style="display:inline;">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="delete_quiz">
+  <button type="submit" class="btn btn-outline" style="color: var(--fail); border-color: var(--fail);">Delete quiz</button>
+</form>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom: 20px;">
+  <div class="section-title">Questions ({{ questions|length }})</div>
+
+  {% for q in questions %}
+  <div class="row-item" style="display:block; border-bottom: 1px solid var(--line);">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap: 12px;">
+      <div style="flex:1;">
+        <span class="badge {% if q.question_type == 'MCQ' %}badge-pass{% elif q.question_type == 'OUTPUT' %}badge-warn{% else %}badge-fail{% endif %}">{{ q.get_question_type_display }}</span>
+        <span class="row-sub font-mono" style="margin-left:8px;">{{ q.marks }} mark{{ q.marks|pluralize }}</span>
+        <p style="margin: 6px 0 0;">{{ q.prompt }}</p>
+        {% if q.code_snippet %}<pre class="font-mono" style="background: var(--paper-dim); padding: 8px 10px; border-radius: var(--radius); font-size: 12.5px; overflow-x: auto; margin-top: 6px;">{{ q.code_snippet }}</pre>{% endif %}
+        {% if q.question_type != 'MCQ' %}<p class="row-sub" style="margin-top:6px;">Correct answer: <span class="font-mono">{{ q.correct_answer }}</span></p>{% endif %}
+      </div>
+      <form method="post" onsubmit="return confirm('Remove this question?');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete_question">
+        <input type="hidden" name="question_id" value="{{ q.id }}">
+        <button type="submit" class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;">Remove</button>
+      </form>
+    </div>
+
+    {% if q.question_type == 'MCQ' %}
+    <div style="margin-top: 10px; padding-left: 4px;">
+      {% for opt in q.options.all %}
+      <div style="display:flex; align-items:center; justify-content:space-between; padding: 5px 0;">
+        <span>{% if opt.is_correct %}<span class="badge badge-pass" style="padding:2px 6px; margin-right:6px;">correct</span>{% endif %}{{ opt.text }}</span>
+        <form method="post" style="display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_option">
+          <input type="hidden" name="option_id" value="{{ opt.id }}">
+          <button type="submit" class="btn btn-outline" style="padding: 2px 8px; font-size: 11.5px;">&times;</button>
+        </form>
+      </div>
+      {% empty %}
+      <p class="row-sub" style="color: var(--warn);">No options added yet — this question can't be answered until you add at least one, with one marked correct.</p>
+      {% endfor %}
+
+      <form method="post" style="display:flex; gap: 8px; margin-top: 8px; align-items:center;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_option">
+        <input type="hidden" name="question_id" value="{{ q.id }}">
+        <input class="field-input" type="text" name="text" placeholder="New option text" required style="flex:1; margin-bottom:0;">
+        <label style="display:flex; align-items:center; gap:4px; font-size: 12.5px; white-space:nowrap;">
+          <input type="checkbox" name="is_correct"> Correct
+        </label>
+        <button type="submit" class="btn btn-outline" style="white-space:nowrap;">Add option</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+  {% empty %}
+  <div class="empty-state">
+    <div class="empty-state-icon">✎</div>
+    <p class="empty-state-text">No questions yet — add your first one below.</p>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card" style="max-width: 640px;">
+  <div class="section-title">Add a question</div>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_question">
+
+    <label class="field-label" for="id_question_type">Type</label>
+    <select name="question_type" id="id_question_type" class="field-input">
+      {% for value, label in question_form.fields.question_type.choices %}
+        <option value="{{ value }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <label class="field-label" for="id_prompt">Question</label>
+    <textarea class="field-input" name="prompt" id="id_prompt" rows="2" required></textarea>
+    {% if question_form.prompt.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ question_form.prompt.errors|join:", " }}</p>{% endif %}
+
+    <label class="field-label" for="id_code_snippet">Code snippet (optional)</label>
+    <textarea class="field-input font-mono" name="code_snippet" id="id_code_snippet" rows="3" placeholder="Shown above the question, e.g. code to predict the output of"></textarea>
+
+    <label class="field-label" for="id_correct_answer">Correct answer</label>
+    <input class="field-input" type="text" name="correct_answer" id="id_correct_answer" placeholder="Leave blank for Multiple Choice — add options below instead">
+    {% if question_form.correct_answer.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ question_form.correct_answer.errors|join:", " }}</p>{% endif %}
+    <p style="color: var(--text-muted); font-size: 12px; margin-top:-10px;">Matched exactly against the student's answer (case and surrounding whitespace are ignored, nothing else).</p>
+
+    <label class="field-label" for="id_marks">Marks</label>
+    <input class="field-input" type="number" min="1" name="marks" id="id_marks" value="1" style="max-width: 120px;">
+
+    <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Add question</button>
+  </form>
+</div>
+{% endblock %}

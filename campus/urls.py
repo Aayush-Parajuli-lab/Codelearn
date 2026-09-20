@@ -16,11 +16,17 @@ urlpatterns = [
     path("users/import/template/", views.user_import_template, name="user_import_template"),
 
     # Courses (admin/teacher/student, filtered by role in the view)
+    path("classes/manage/", views.class_subject_manage, name="class_subject_manage"),
+    path("courses/create/", views.course_create, name="course_create"),
     path("courses/", views.course_list, name="course_list"),
     path("courses/<int:pk>/topics/", views.course_topics, name="course_topics"),
+    path("courses/<int:pk>/roster/", views.course_roster, name="course_roster"),
     path("topics/<int:pk>/forum/", views.topic_forum, name="topic_forum"),
+    path("topics/<int:pk>/lessons/", views.topic_lessons, name="topic_lessons"),
+    path("lessons/<int:pk>/", views.lesson_detail, name="lesson_detail"),
 
     # Assignments
+    path("assignments/create/", views.assignment_create, name="assignment_create"),
     path("assignments/", views.assignment_list, name="assignment_list"),
     path("assignments/<int:pk>/", views.assignment_detail, name="assignment_detail"),
     path("assignments/<int:pk>/plagiarism/", views.plagiarism_check, name="plagiarism_check"),
@@ -42,6 +48,9 @@ urlpatterns = [
     path("calendar/", views.calendar_view, name="calendar_view"),
 
     # Quizzes
+    path("quizzes/manage/", views.quiz_manage_list, name="quiz_manage_list"),
+    path("quizzes/manage/create/", views.quiz_create, name="quiz_create"),
+    path("quizzes/manage/<int:pk>/", views.quiz_manage_detail, name="quiz_manage_detail"),
     path("quizzes/", views.quiz_list, name="quiz_list"),
     path("quizzes/<int:pk>/take/", views.quiz_take, name="quiz_take"),
     path("quizzes/attempts/<int:pk>/", views.quiz_result, name="quiz_result"),

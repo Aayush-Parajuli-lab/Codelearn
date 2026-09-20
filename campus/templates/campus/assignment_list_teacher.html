@@ -1,9 +1,11 @@
 {% extends "campus/base.html" %}
 {% block title %}Assignments — CodeLearn{% endblock %}
 {% block page_title %}Assignments{% endblock %}
+{% block topbar_extra %}<a href="{% url 'assignment_create' %}" class="btn btn-primary">+ Create assignment</a>{% endblock %}
 
 {% block content %}
 <div class="card">
+  {% if assignments %}
   <table class="table">
     <thead>
       <tr><th>Title</th><th>Course</th><th>Deadline</th><th>Submissions</th><th></th></tr>
@@ -17,10 +19,15 @@
         <td class="font-mono">{{ a.submission_count }}</td>
         <td><a href="{% url 'assignment_detail' a.pk %}" class="btn btn-outline">Review</a></td>
       </tr>
-      {% empty %}
-      <tr><td colspan="5" style="color: var(--text-muted);">No assignments yet.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">✎</div>
+    <p class="empty-state-text">No assignments yet.</p>
+    <a href="{% url 'assignment_create' %}" class="btn btn-primary" style="margin-top: 10px;">Create your first assignment</a>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

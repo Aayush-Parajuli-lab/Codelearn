@@ -3,22 +3,57 @@
 {% block page_title %}{{ course.title }}{% endblock %}
 {% block page_subtitle %}<p>Topics and discussions</p>{% endblock %}
 
+{% block topbar_extra %}
+{% if can_manage %}<a href="{% url 'course_roster' course.id %}" class="btn btn-outline">Roster</a>{% endif %}
+{% endblock %}
+
 {% block content %}
 <div class="card">
+  {% if topics %}
   <table class="table">
-    <thead><tr><th>Topic</th><th>Lessons</th><th>Discussion posts</th><th></th></tr></thead>
+    <thead><tr><th>Topic</th><th>Lessons</th><th>Discussion posts</th><th colspan="2"></th></tr></thead>
     <tbody>
       {% for t in topics %}
       <tr>
         <td>{{ t.name }}</td>
         <td class="font-mono">{{ t.lesson_count }}</td>
         <td class="font-mono">{{ t.post_count }}</td>
-        <td><a href="{% url 'topic_forum' t.id %}" class="btn btn-outline">Open discussion</a></td>
+        <td><a href="{% url 'topic_lessons' t.id %}" class="btn btn-outline">Lessons</a></td>
+        <td>
+          <a href="{% url 'topic_forum' t.id %}" class="btn btn-outline">Discussion</a>
+          {% if can_manage %}
+          <form method="post" style="display:inline;" onsubmit="return confirm('Remove this topic and everything under it (lessons, assignments, quizzes)?');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete_topic">
+            <input type="hidden" name="topic_id" value="{{ t.id }}">
+            <button type="submit" class="btn btn-outline" style="color: var(--fail); border-color: var(--fail);">Remove</button>
+          </form>
+          {% endif %}
+        </td>
       </tr>
-      {% empty %}
-      <tr><td colspan="4" style="color: var(--text-muted);">No topics yet.</td></tr>
       {% endfor %}
     </tbody>
   </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">▤</div>
+    <p class="empty-state-text">No topics yet.</p>
+  </div>
+  {% endif %}
 </div>
+
+{% if can_manage %}
+<div class="card" style="margin-top: 16px; max-width: 480px;">
+  <div class="section-title">Add a topic</div>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add_topic">
+    <label class="field-label" for="id_name">Topic name</label>
+    <input class="field-input" type="text" name="name" id="id_name" placeholder="e.g. Loops" required>
+    <label class="field-label" for="id_order">Order (lower shows first)</label>
+    <input class="field-input" type="number" min="0" name="order" id="id_order" value="0" style="max-width: 120px;">
+    <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Add topic</button>
+  </form>
+</div>
+{% endif %}
 {% endblock %}

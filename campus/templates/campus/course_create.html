@@ -1,0 +1,60 @@
+{% extends "campus/base.html" %}
+{% block title %}Create course — CodeLearn{% endblock %}
+{% block page_title %}Create a course{% endblock %}
+
+{% block content %}
+{% if no_subjects or no_teachers %}
+<div class="card" style="margin-bottom: 16px; border-color: var(--warn);">
+  <p style="margin:0;">
+    {% if no_subjects %}You don't have any Subjects yet. {% endif %}
+    {% if no_teachers %}You don't have any Teacher accounts yet ("Add user" &rarr; Teacher). {% endif %}
+    {% if no_subjects %}<a href="{% url 'class_subject_manage' %}">Add a subject first &rarr;</a>{% endif %}
+  </p>
+</div>
+{% endif %}
+
+<div class="card" style="max-width: 600px;">
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <label class="field-label" for="id_title">Course title</label>
+    <input class="field-input" type="text" name="title" id="id_title" value="{{ form.title.value|default:'' }}" required>
+
+    <label class="field-label" for="id_subject">Subject</label>
+    <select name="subject" id="id_subject" class="field-input">
+      <option value="">— Select a subject —</option>
+      {% for s in form.fields.subject.queryset %}
+        <option value="{{ s.id }}">{{ s.name }} ({{ s.code }})</option>
+      {% endfor %}
+    </select>
+    {% if form.subject.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ form.subject.errors|join:", " }}</p>{% endif %}
+
+    <label class="field-label" for="id_teacher">Teacher</label>
+    <select name="teacher" id="id_teacher" class="field-input">
+      <option value="">— Unassigned —</option>
+      {% for t in form.fields.teacher.queryset %}
+        <option value="{{ t.id }}">{{ t.user.get_full_name|default:t.user.username }}</option>
+      {% endfor %}
+    </select>
+
+    <label class="field-label" for="id_school_classes">School classes (optional, ctrl/cmd-click for multiple)</label>
+    <select name="school_classes" id="id_school_classes" class="field-input" multiple size="4">
+      {% for c in form.fields.school_classes.queryset %}
+        <option value="{{ c.id }}">{{ c.name }} {{ c.section }}</option>
+      {% endfor %}
+    </select>
+
+    <label class="field-label" for="id_programming_language">Programming language</label>
+    <select name="programming_language" id="id_programming_language" class="field-input">
+      {% for value, label in form.fields.programming_language.choices %}
+        <option value="{{ value }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <label class="field-label" for="id_description">Description (optional)</label>
+    <textarea class="field-input" name="description" id="id_description" rows="3"></textarea>
+
+    <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Create course</button>
+  </form>
+</div>
+{% endblock %}

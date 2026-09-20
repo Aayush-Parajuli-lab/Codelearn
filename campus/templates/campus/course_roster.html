@@ -1,0 +1,58 @@
+{% extends "campus/base.html" %}
+{% block title %}{{ course.title }} roster — CodeLearn{% endblock %}
+{% block page_title %}{{ course.title }}{% endblock %}
+{% block page_subtitle %}<p>Enrolled students</p>{% endblock %}
+
+{% block content %}
+<div class="grid grid-2">
+  <div class="card">
+    <div class="section-title">Enrolled ({{ enrolled_students|length }})</div>
+    <div class="row-list">
+      {% for s in enrolled_students %}
+      <div class="row-item">
+        <span>{{ s.user.get_full_name|default:s.user.username }}</span>
+        <form method="post" onsubmit="return confirm('Remove this student from the course?');">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="unenroll">
+          <input type="hidden" name="student_id" value="{{ s.id }}">
+          <button type="submit" class="btn btn-outline" style="padding: 3px 10px; font-size: 12px;">Remove</button>
+        </form>
+      </div>
+      {% empty %}
+      <div class="empty-state">
+        <div class="empty-state-icon">◈</div>
+        <p class="empty-state-text">No students enrolled yet.</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Add a student</div>
+    {% if available_students %}
+    <form method="post" style="display:flex; gap: 8px; align-items:flex-end;">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="enroll">
+      <div style="flex:1;">
+        <label class="field-label" for="id_student_id">Student</label>
+        <select name="student_id" id="id_student_id" class="field-input">
+          {% for s in available_students %}
+            <option value="{{ s.id }}">{{ s.user.get_full_name|default:s.user.username }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-bottom: 12px;">Enroll</button>
+    </form>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">✓</div>
+      <p class="empty-state-text">Every student is already enrolled in this course.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div style="margin-top: 16px;">
+  <a href="{% url 'course_topics' course.id %}" class="btn btn-outline">&larr; Back to {{ course.title }}</a>
+</div>
+{% endblock %}

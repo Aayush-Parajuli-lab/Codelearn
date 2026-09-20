@@ -1,0 +1,33 @@
+{% extends "campus/base.html" %}
+{% block title %}Manage quizzes — CodeLearn{% endblock %}
+{% block page_title %}Manage quizzes{% endblock %}
+{% block page_subtitle %}<p>Create quizzes and questions without touching the Django admin panel</p>{% endblock %}
+{% block topbar_extra %}<a href="{% url 'quiz_create' %}" class="btn btn-primary">+ Create quiz</a>{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% if quizzes %}
+  <table class="table">
+    <thead><tr><th>Title</th><th>Topic</th><th>Course</th><th>Questions</th><th>Attempts</th><th></th></tr></thead>
+    <tbody>
+      {% for q in quizzes %}
+      <tr>
+        <td>{{ q.title }}</td>
+        <td>{{ q.topic.name }}</td>
+        <td>{{ q.topic.course.title }}</td>
+        <td class="font-mono">{{ q.question_count }}</td>
+        <td class="font-mono">{{ q.attempt_count }}</td>
+        <td><a href="{% url 'quiz_manage_detail' q.pk %}" class="btn btn-outline">Manage</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-state-icon">✎</div>
+    <p class="empty-state-text">No quizzes yet.</p>
+    <a href="{% url 'quiz_create' %}" class="btn btn-primary" style="margin-top: 10px;">Create your first quiz</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

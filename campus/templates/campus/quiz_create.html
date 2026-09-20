@@ -1,0 +1,40 @@
+{% extends "campus/base.html" %}
+{% block title %}Create quiz — CodeLearn{% endblock %}
+{% block page_title %}Create a quiz{% endblock %}
+{% block page_subtitle %}<p>You'll add questions on the next screen</p>{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 560px;">
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <label class="field-label" for="id_topic">Topic</label>
+    <select name="topic" id="id_topic" class="field-input">
+      {% for t in form.fields.topic.queryset %}
+        <option value="{{ t.id }}" {% if form.topic.value|stringformat:"s" == t.id|stringformat:"s" %}selected{% endif %}>{{ t.course.title }} — {{ t.name }}</option>
+      {% endfor %}
+    </select>
+    {% if form.topic.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ form.topic.errors|join:", " }}</p>{% endif %}
+    {% if not form.fields.topic.queryset %}
+      <p style="color: var(--text-muted); font-size: 12.5px; margin-top:-10px;">You don't have any topics yet — a topic (under one of your courses) needs to exist before you can add a quiz to it.</p>
+    {% endif %}
+
+    <label class="field-label" for="id_title">Quiz title</label>
+    <input class="field-input" type="text" name="title" id="id_title" value="{{ form.title.value|default:'' }}" required>
+    {% if form.title.errors %}<p style="color: var(--fail); font-size: 12.5px; margin-top:-12px; margin-bottom: 12px;">{{ form.title.errors|join:", " }}</p>{% endif %}
+
+    <div class="grid grid-2" style="gap: 12px;">
+      <div>
+        <label class="field-label" for="id_time_limit_minutes">Time limit (minutes)</label>
+        <input class="field-input" type="number" min="1" name="time_limit_minutes" id="id_time_limit_minutes" value="{{ form.time_limit_minutes.value|default:15 }}">
+      </div>
+      <div>
+        <label class="field-label" for="id_due_date">Due date (optional)</label>
+        <input class="field-input" type="datetime-local" name="due_date" id="id_due_date" value="{{ form.due_date.value|default:'' }}">
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Create quiz &amp; add questions</button>
+  </form>
+</div>
+{% endblock %}

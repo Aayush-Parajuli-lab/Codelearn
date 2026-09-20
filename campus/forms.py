@@ -5,8 +5,10 @@ from django import forms
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
-from academics.models import SchoolClass
+from academics.models import SchoolClass, Subject, Course, Topic, Lesson
 from accounts.models import Student, User
+from quizzes.models import Quiz, Question, AnswerOption
+from assignments.models import Assignment, TestCase
 
 
 def generate_temp_password(length: int = 12) -> str:
@@ -119,3 +121,192 @@ class UserCreateForm(forms.Form):
         # Parent has no strictly-required extra field (children can be linked later).
 
         return cleaned
+
+
+class QuizCreateForm(forms.ModelForm):
+    """Used by the in-app quiz builder (Teacher/Admin) — replaces needing /admin/ to make a quiz."""
+
+    class Meta:
+        model = Quiz
+        fields = ["topic", "title", "time_limit_minutes", "due_date"]
+        widgets = {
+            "topic": forms.Select(attrs={"class": "field-input"}),
+            "title": forms.TextInput(attrs={"class": "field-input"}),
+            "time_limit_minutes": forms.NumberInput(attrs={"class": "field-input", "min": 1}),
+            "due_date": forms.DateTimeInput(
+                attrs={"class": "field-input", "type": "datetime-local"}, format="%Y-%m-%dT%H:%M"
+            ),
+        }
+
+    def __init__(self, *args, topic_queryset=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if topic_queryset is not None:
+            self.fields["topic"].queryset = topic_queryset
+        self.fields["due_date"].input_formats = ["%Y-%m-%dT%H:%M"]
+
+
+class QuestionCreateForm(forms.ModelForm):
+    """One question at a time, added to an existing quiz from the builder page."""
+
+    class Meta:
+        model = Question
+        fields = ["question_type", "prompt", "code_snippet", "correct_answer", "marks"]
+        widgets = {
+            "question_type": forms.Select(attrs={"class": "field-input"}),
+            "prompt": forms.Textarea(attrs={"class": "field-input", "rows": 2}),
+            "code_snippet": forms.Textarea(
+                attrs={"class": "field-input font-mono", "rows": 3,
+                       "placeholder": "Optional — shown above the question, e.g. a code block to predict/debug"}
+            ),
+            "correct_answer": forms.TextInput(
+                attrs={"class": "field-input",
+                       "placeholder": "For MCQ, this can be left blank — correctness comes from the options below"}
+            ),
+            "marks": forms.NumberInput(attrs={"class": "field-input", "min": 1}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["code_snippet"].required = False
+        self.fields["correct_answer"].required = False
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("question_type") != Question.QuestionType.MCQ and not cleaned.get("correct_answer"):
+            self.add_error(
+                "correct_answer",
+                "Required for Output Prediction / Debugging questions — this is matched "
+                "exactly (case/whitespace-insensitive) against the student's answer.",
+            )
+        return cleaned
+
+
+class AnswerOptionCreateForm(forms.ModelForm):
+    """One answer option at a time, added to an existing MCQ question."""
+
+    class Meta:
+        model = AnswerOption
+        fields = ["text", "is_correct"]
+        widgets = {
+            "text": forms.TextInput(attrs={"class": "field-input", "placeholder": "Option text"}),
+        }
+
+
+class SchoolClassCreateForm(forms.ModelForm):
+    class Meta:
+        model = SchoolClass
+        fields = ["name", "section", "academic_year"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "field-input", "placeholder": "e.g. BCA 5th Sem"}),
+            "section": forms.TextInput(attrs={"class": "field-input", "placeholder": "Optional, e.g. A"}),
+            "academic_year": forms.TextInput(attrs={"class": "field-input", "placeholder": "e.g. 2025-26"}),
+        }
+
+
+class SubjectCreateForm(forms.ModelForm):
+    class Meta:
+        model = Subject
+        fields = ["name", "code"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "field-input", "placeholder": "e.g. Programming Fundamentals"}),
+            "code": forms.TextInput(attrs={"class": "field-input", "placeholder": "e.g. CSC101 (must be unique)"}),
+        }
+
+
+class CourseCreateForm(forms.ModelForm):
+    class Meta:
+        model = Course
+        fields = ["title", "subject", "teacher", "school_classes", "programming_language", "description"]
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "field-input"}),
+            "subject": forms.Select(attrs={"class": "field-input"}),
+            "teacher": forms.Select(attrs={"class": "field-input"}),
+            "school_classes": forms.SelectMultiple(attrs={"class": "field-input", "size": 4}),
+            "programming_language": forms.Select(attrs={"class": "field-input"}),
+            "description": forms.Textarea(attrs={"class": "field-input", "rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["teacher"].required = False
+        self.fields["school_classes"].required = False
+        self.fields["description"].required = False
+
+
+class TopicCreateForm(forms.ModelForm):
+    class Meta:
+        model = Topic
+        fields = ["name", "order"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "field-input", "placeholder": "e.g. Loops"}),
+            "order": forms.NumberInput(attrs={"class": "field-input", "min": 0}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["order"].required = False
+        self.fields["order"].initial = 0
+
+
+class LessonCreateForm(forms.ModelForm):
+    class Meta:
+        model = Lesson
+        fields = ["title", "content", "example_code", "order"]
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "field-input"}),
+            "content": forms.Textarea(attrs={"class": "field-input", "rows": 6, "placeholder": "Lesson text (plain text/markdown)"}),
+            "example_code": forms.Textarea(attrs={"class": "field-input font-mono", "rows": 5}),
+            "order": forms.NumberInput(attrs={"class": "field-input", "min": 0}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["example_code"].required = False
+        self.fields["order"].required = False
+        self.fields["order"].initial = 0
+
+
+class AssignmentCreateForm(forms.ModelForm):
+    """Used by the in-app assignment builder (Teacher/Admin) — replaces needing /admin/."""
+
+    class Meta:
+        model = Assignment
+        fields = ["topic", "title", "description", "instructions", "programming_language", "max_marks", "deadline"]
+        widgets = {
+            "topic": forms.Select(attrs={"class": "field-input"}),
+            "title": forms.TextInput(attrs={"class": "field-input"}),
+            "description": forms.Textarea(attrs={"class": "field-input", "rows": 3}),
+            "instructions": forms.Textarea(attrs={"class": "field-input", "rows": 3}),
+            "programming_language": forms.Select(attrs={"class": "field-input"}),
+            "max_marks": forms.NumberInput(attrs={"class": "field-input", "min": 1}),
+            "deadline": forms.DateTimeInput(
+                attrs={"class": "field-input", "type": "datetime-local"}, format="%Y-%m-%dT%H:%M"
+            ),
+        }
+
+    def __init__(self, *args, topic_queryset=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if topic_queryset is not None:
+            self.fields["topic"].queryset = topic_queryset
+        self.fields["instructions"].required = False
+        self.fields["deadline"].input_formats = ["%Y-%m-%dT%H:%M"]
+
+
+class TestCaseCreateForm(forms.ModelForm):
+    """One test case at a time, added to an existing assignment from its detail page."""
+
+    class Meta:
+        model = TestCase
+        fields = ["input_data", "expected_output", "is_hidden", "weight"]
+        widgets = {
+            "input_data": forms.Textarea(
+                attrs={"class": "field-input font-mono", "rows": 2, "placeholder": "Optional — stdin fed to the program"}
+            ),
+            "expected_output": forms.Textarea(attrs={"class": "field-input font-mono", "rows": 2}),
+            "weight": forms.NumberInput(attrs={"class": "field-input", "step": "0.1", "min": "0.1"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["input_data"].required = False
+        self.fields["weight"].initial = 1.0

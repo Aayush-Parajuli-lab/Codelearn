@@ -10,11 +10,17 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.models import User, Student, Teacher, Parent
-from academics.models import Course, SchoolClass, Topic, ForumPost
-from assignments.models import Assignment, Submission
+from academics.models import Course, SchoolClass, Subject, Topic, Lesson, Enrollment, ForumPost
+from assignments.models import Assignment, Submission, TestCase
 from attendance.models import AttendanceRecord
 from ml_engine.models import StudentTopicFeature, Recommendation
-from campus.forms import UserCreateForm, generate_temp_password, ProfileUpdateForm, ThemeForm, NotificationsForm, CSVImportForm
+from campus.forms import (
+    UserCreateForm, generate_temp_password, ProfileUpdateForm, ThemeForm,
+    NotificationsForm, CSVImportForm, QuizCreateForm, QuestionCreateForm,
+    AnswerOptionCreateForm, SchoolClassCreateForm, SubjectCreateForm,
+    CourseCreateForm, TopicCreateForm, LessonCreateForm,
+    AssignmentCreateForm, TestCaseCreateForm,
+)
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from messaging.avatars import avatar_context
@@ -37,6 +43,7 @@ NAV_URLS = {
     "Academic performance": "progress_view",
     "Messages": "inbox",
     "Quizzes": "quiz_list",
+    "Manage quizzes": "quiz_manage_list",
     "Calendar": "calendar_view",
 }
 
@@ -47,8 +54,8 @@ def _nav_for(request, active):
     a `badge` count of total unread messages across all conversations."""
     role = request.user.role
     items_by_role = {
-        User.Role.ADMIN: ["Dashboard", "Students", "Teachers", "Courses", "Reports", "Add user", "Calendar", "Messages"],
-        User.Role.TEACHER: ["Dashboard", "My courses", "Assignments", "Attendance", "Submissions", "Calendar", "Messages"],
+        User.Role.ADMIN: ["Dashboard", "Students", "Teachers", "Courses", "Manage quizzes", "Reports", "Add user", "Calendar", "Messages"],
+        User.Role.TEACHER: ["Dashboard", "My courses", "Assignments", "Manage quizzes", "Attendance", "Submissions", "Calendar", "Messages"],
         User.Role.STUDENT: ["Dashboard", "My courses", "Assignments", "Quizzes", "Progress", "Attendance", "Calendar", "Messages"],
         User.Role.PARENT: ["Dashboard", "My children", "Attendance", "Academic performance", "Calendar", "Messages"],
     }
@@ -608,6 +615,78 @@ def user_import(request):
 # Courses (Admin sees all, Teacher sees their own)
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Course / class / subject creation (Admin) — previously /admin/-only
+# ---------------------------------------------------------------------------
+
+@login_required
+def class_subject_manage(request):
+    if not _role_required(request.user, User.Role.ADMIN):
+        return redirect("dashboard")
+
+    class_form = SchoolClassCreateForm()
+    subject_form = SubjectCreateForm()
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "add_class":
+            class_form = SchoolClassCreateForm(request.POST)
+            if class_form.is_valid():
+                class_form.save()
+                messages.success(request, "Class added.")
+                return redirect("class_subject_manage")
+
+        elif action == "delete_class":
+            SchoolClass.objects.filter(pk=request.POST.get("class_id")).delete()
+            return redirect("class_subject_manage")
+
+        elif action == "add_subject":
+            subject_form = SubjectCreateForm(request.POST)
+            if subject_form.is_valid():
+                subject_form.save()
+                messages.success(request, "Subject added.")
+                return redirect("class_subject_manage")
+
+        elif action == "delete_subject":
+            Subject.objects.filter(pk=request.POST.get("subject_id")).delete()
+            return redirect("class_subject_manage")
+
+    context = {
+        "nav_items": _nav_for(request, "Courses"),
+        "classes": SchoolClass.objects.all(),
+        "subjects": Subject.objects.all(),
+        "class_form": class_form,
+        "subject_form": subject_form,
+    }
+    return render(request, "campus/class_subject_manage.html", context)
+
+
+@login_required
+def course_create(request):
+    if not _role_required(request.user, User.Role.ADMIN):
+        return redirect("dashboard")
+
+    if request.method == "POST":
+        form = CourseCreateForm(request.POST)
+        if form.is_valid():
+            course = form.save()
+            messages.success(request, f"Course \u201c{course.title}\u201d created \u2014 now add some topics.")
+            return redirect("course_topics", pk=course.pk)
+    else:
+        form = CourseCreateForm()
+
+    no_subjects = not Subject.objects.exists()
+    no_teachers = not Teacher.objects.exists()
+    context = {
+        "nav_items": _nav_for(request, "Courses"),
+        "form": form,
+        "no_subjects": no_subjects,
+        "no_teachers": no_teachers,
+    }
+    return render(request, "campus/course_create.html", context)
+
+
 @login_required
 def course_list(request):
     role = request.user.role
@@ -642,18 +721,129 @@ def _user_can_access_course(user, course):
 
 
 @login_required
+def course_roster(request, pk):
+    course = get_object_or_404(Course, pk=pk)
+
+    if not _role_required(request.user, User.Role.ADMIN, User.Role.TEACHER):
+        return redirect("dashboard")
+    if request.user.role == User.Role.TEACHER:
+        teacher = getattr(request.user, "teacher_profile", None)
+        if teacher is None or course.teacher_id != teacher.id:
+            return redirect("dashboard")
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+        if action == "enroll":
+            student = Student.objects.filter(pk=request.POST.get("student_id")).first()
+            if student is not None:
+                Enrollment.objects.get_or_create(student=student, course=course)
+                messages.success(request, f"{student.user.get_full_name() or student.user.username} enrolled.")
+            return redirect("course_roster", pk=course.pk)
+        elif action == "unenroll":
+            Enrollment.objects.filter(course=course, student_id=request.POST.get("student_id")).delete()
+            messages.success(request, "Student removed from the course.")
+            return redirect("course_roster", pk=course.pk)
+
+    enrolled_ids = course.enrollments.values_list("student_id", flat=True)
+    enrolled_students = Student.objects.filter(id__in=enrolled_ids).select_related("user").order_by("user__first_name")
+    available_students = (
+        Student.objects.exclude(id__in=enrolled_ids).select_related("user").order_by("user__first_name")
+    )
+
+    active_label = "Courses" if request.user.role == User.Role.ADMIN else "My courses"
+    context = {
+        "nav_items": _nav_for(request, active_label),
+        "course": course,
+        "enrolled_students": enrolled_students,
+        "available_students": available_students,
+    }
+    return render(request, "campus/course_roster.html", context)
+
+
+@login_required
 def course_topics(request, pk):
     course = get_object_or_404(Course, pk=pk)
     if not _user_can_access_course(request.user, course):
         return redirect("dashboard")
+
+    can_manage = request.user.role in (User.Role.ADMIN, User.Role.TEACHER)
+    topic_form = TopicCreateForm()
+
+    if request.method == "POST" and can_manage:
+        action = request.POST.get("action")
+        if action == "add_topic":
+            topic_form = TopicCreateForm(request.POST)
+            if topic_form.is_valid():
+                topic = topic_form.save(commit=False)
+                topic.course = course
+                topic.save()
+                messages.success(request, f"Topic \u201c{topic.name}\u201d added.")
+                return redirect("course_topics", pk=course.pk)
+        elif action == "delete_topic":
+            Topic.objects.filter(pk=request.POST.get("topic_id"), course=course).delete()
+            messages.success(request, "Topic removed.")
+            return redirect("course_topics", pk=course.pk)
 
     topics = course.topics.annotate(
         lesson_count=Count("lessons", distinct=True),
         post_count=Count("forum_posts", distinct=True),
     )
     active_label = "Courses" if request.user.role == User.Role.ADMIN else "My courses"
-    context = {"nav_items": _nav_for(request, active_label), "course": course, "topics": topics}
+    context = {
+        "nav_items": _nav_for(request, active_label),
+        "course": course,
+        "topics": topics,
+        "can_manage": can_manage,
+        "topic_form": topic_form,
+    }
     return render(request, "campus/course_topics.html", context)
+
+
+@login_required
+def topic_lessons(request, pk):
+    topic = get_object_or_404(Topic.objects.select_related("course"), pk=pk)
+    if not _user_can_access_course(request.user, topic.course):
+        return redirect("dashboard")
+
+    can_manage = request.user.role in (User.Role.ADMIN, User.Role.TEACHER)
+    lesson_form = LessonCreateForm()
+
+    if request.method == "POST" and can_manage:
+        action = request.POST.get("action")
+        if action == "add_lesson":
+            lesson_form = LessonCreateForm(request.POST)
+            if lesson_form.is_valid():
+                lesson = lesson_form.save(commit=False)
+                lesson.topic = topic
+                lesson.save()
+                messages.success(request, f"Lesson \u201c{lesson.title}\u201d added.")
+                return redirect("topic_lessons", pk=topic.pk)
+        elif action == "delete_lesson":
+            Lesson.objects.filter(pk=request.POST.get("lesson_id"), topic=topic).delete()
+            messages.success(request, "Lesson removed.")
+            return redirect("topic_lessons", pk=topic.pk)
+
+    lessons = topic.lessons.all()
+    active_label = "Courses" if request.user.role == User.Role.ADMIN else "My courses"
+    context = {
+        "nav_items": _nav_for(request, active_label),
+        "topic": topic,
+        "lessons": lessons,
+        "can_manage": can_manage,
+        "lesson_form": lesson_form,
+    }
+    return render(request, "campus/topic_lessons.html", context)
+
+
+@login_required
+def lesson_detail(request, pk):
+    lesson = get_object_or_404(Lesson.objects.select_related("topic__course"), pk=pk)
+    if not _user_can_access_course(request.user, lesson.topic.course):
+        return redirect("dashboard")
+
+    active_label = "Courses" if request.user.role == User.Role.ADMIN else "My courses"
+    context = {"nav_items": _nav_for(request, active_label), "lesson": lesson}
+    return render(request, "campus/lesson_detail.html", context)
 
 
 @login_required
@@ -687,6 +877,33 @@ def topic_forum(request, pk):
 # ---------------------------------------------------------------------------
 
 @login_required
+def assignment_create(request):
+    if not _role_required(request.user, User.Role.TEACHER, User.Role.ADMIN):
+        return redirect("dashboard")
+
+    if request.user.role == User.Role.TEACHER:
+        teacher = getattr(request.user, "teacher_profile", None)
+        topic_qs = Topic.objects.filter(course__teacher=teacher).select_related("course")
+    else:
+        teacher = None
+        topic_qs = Topic.objects.select_related("course").all()
+
+    if request.method == "POST":
+        form = AssignmentCreateForm(request.POST, topic_queryset=topic_qs)
+        if form.is_valid():
+            assignment = form.save(commit=False)
+            assignment.created_by = teacher
+            assignment.save()
+            messages.success(request, f"Assignment \u201c{assignment.title}\u201d created \u2014 now add some test cases.")
+            return redirect("assignment_detail", pk=assignment.pk)
+    else:
+        form = AssignmentCreateForm(topic_queryset=topic_qs)
+
+    context = {"nav_items": _nav_for(request, "Assignments"), "form": form}
+    return render(request, "campus/assignment_create.html", context)
+
+
+@login_required
 def assignment_list(request):
     role = request.user.role
     if role == User.Role.TEACHER:
@@ -717,6 +934,16 @@ def assignment_list(request):
     return render(request, "campus/assignment_list_teacher.html", context)
 
 
+def _assignment_manage_access(user, assignment):
+    """Teachers may only manage test cases on their own courses' assignments; admins may manage any."""
+    if user.role == User.Role.ADMIN:
+        return True
+    if user.role == User.Role.TEACHER:
+        teacher = getattr(user, "teacher_profile", None)
+        return teacher is not None and assignment.topic.course.teacher_id == teacher.id
+    return False
+
+
 @login_required
 def assignment_detail(request, pk):
     assignment = get_object_or_404(Assignment.objects.select_related("topic__course"), pk=pk)
@@ -733,6 +960,25 @@ def assignment_detail(request, pk):
         }
         return render(request, "campus/assignment_detail_student.html", context)
 
+    can_manage = _assignment_manage_access(request.user, assignment)
+    test_case_form = TestCaseCreateForm()
+
+    if request.method == "POST" and can_manage:
+        action = request.POST.get("action")
+        if action == "add_test_case":
+            test_case_form = TestCaseCreateForm(request.POST)
+            if test_case_form.is_valid():
+                tc = test_case_form.save(commit=False)
+                tc.assignment = assignment
+                tc.save()
+                messages.success(request, "Test case added.")
+                return redirect("assignment_detail", pk=assignment.pk)
+            messages.error(request, "Couldn\u2019t add that test case \u2014 expected output is required.")
+        elif action == "delete_test_case":
+            TestCase.objects.filter(pk=request.POST.get("test_case_id"), assignment=assignment).delete()
+            messages.success(request, "Test case removed.")
+            return redirect("assignment_detail", pk=assignment.pk)
+
     submissions = (
         Submission.objects.filter(assignment=assignment).select_related("student__user").order_by("-submitted_at")
     )
@@ -742,6 +988,8 @@ def assignment_detail(request, pk):
         "assignment": assignment,
         "test_cases": assignment.test_cases.all(),
         "submissions": submissions,
+        "can_manage": can_manage,
+        "test_case_form": test_case_form,
     }
     return render(request, "campus/assignment_detail_teacher.html", context)
 
@@ -1221,6 +1469,132 @@ class RememberMeLoginView(auth_views.LoginView):
 # ---------------------------------------------------------------------------
 # Quizzes (student-facing: list, take, view result)
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Quiz management (Teacher/Admin) — an in-app builder, so quizzes no longer
+# have to be created through Django's /admin/ panel.
+# ---------------------------------------------------------------------------
+
+@login_required
+def quiz_manage_list(request):
+    if not _role_required(request.user, User.Role.TEACHER, User.Role.ADMIN):
+        return redirect("dashboard")
+
+    from quizzes.models import Quiz
+
+    if request.user.role == User.Role.TEACHER:
+        teacher = getattr(request.user, "teacher_profile", None)
+        quizzes = Quiz.objects.filter(topic__course__teacher=teacher)
+    else:
+        quizzes = Quiz.objects.all()
+
+    quizzes = (
+        quizzes.select_related("topic__course")
+        .annotate(question_count=Count("questions"), attempt_count=Count("attempts"))
+        .order_by("-created_at")
+    )
+
+    context = {"nav_items": _nav_for(request, "Manage quizzes"), "quizzes": quizzes}
+    return render(request, "campus/quiz_manage_list.html", context)
+
+
+@login_required
+def quiz_create(request):
+    if not _role_required(request.user, User.Role.TEACHER, User.Role.ADMIN):
+        return redirect("dashboard")
+
+    teacher = None
+    if request.user.role == User.Role.TEACHER:
+        teacher = getattr(request.user, "teacher_profile", None)
+        topic_qs = Topic.objects.filter(course__teacher=teacher).select_related("course")
+    else:
+        topic_qs = Topic.objects.select_related("course").all()
+
+    if request.method == "POST":
+        form = QuizCreateForm(request.POST, topic_queryset=topic_qs)
+        if form.is_valid():
+            quiz = form.save(commit=False)
+            quiz.created_by = teacher
+            quiz.save()
+            messages.success(request, f"Quiz \u201c{quiz.title}\u201d created \u2014 now add some questions below.")
+            return redirect("quiz_manage_detail", pk=quiz.pk)
+    else:
+        form = QuizCreateForm(topic_queryset=topic_qs)
+
+    context = {"nav_items": _nav_for(request, "Manage quizzes"), "form": form}
+    return render(request, "campus/quiz_create.html", context)
+
+
+def _quiz_manage_access(user, quiz):
+    """Teachers may only manage quizzes on courses they teach; admins may manage any quiz."""
+    if user.role == User.Role.ADMIN:
+        return True
+    if user.role == User.Role.TEACHER:
+        teacher = getattr(user, "teacher_profile", None)
+        return teacher is not None and quiz.topic.course.teacher_id == teacher.id
+    return False
+
+
+@login_required
+def quiz_manage_detail(request, pk):
+    from quizzes.models import Quiz, Question, AnswerOption
+
+    quiz = get_object_or_404(Quiz.objects.select_related("topic__course"), pk=pk)
+    if not _quiz_manage_access(request.user, quiz):
+        return redirect("dashboard")
+
+    question_form = QuestionCreateForm()
+    option_form = AnswerOptionCreateForm()
+
+    if request.method == "POST":
+        action = request.POST.get("action")
+
+        if action == "add_question":
+            question_form = QuestionCreateForm(request.POST)
+            if question_form.is_valid():
+                question = question_form.save(commit=False)
+                question.quiz = quiz
+                question.save()
+                messages.success(request, "Question added.")
+                return redirect("quiz_manage_detail", pk=quiz.pk)
+            messages.error(request, "Couldn\u2019t add that question \u2014 check the fields below.")
+
+        elif action == "delete_question":
+            Question.objects.filter(pk=request.POST.get("question_id"), quiz=quiz).delete()
+            messages.success(request, "Question removed.")
+            return redirect("quiz_manage_detail", pk=quiz.pk)
+
+        elif action == "add_option":
+            question = get_object_or_404(Question, pk=request.POST.get("question_id"), quiz=quiz)
+            o_form = AnswerOptionCreateForm(request.POST)
+            if o_form.is_valid():
+                option = o_form.save(commit=False)
+                option.question = question
+                option.save()
+            else:
+                messages.error(request, "Couldn\u2019t add that option \u2014 option text is required.")
+            return redirect("quiz_manage_detail", pk=quiz.pk)
+
+        elif action == "delete_option":
+            AnswerOption.objects.filter(pk=request.POST.get("option_id"), question__quiz=quiz).delete()
+            return redirect("quiz_manage_detail", pk=quiz.pk)
+
+        elif action == "delete_quiz":
+            quiz.delete()
+            messages.success(request, "Quiz deleted.")
+            return redirect("quiz_manage_list")
+
+    questions = quiz.questions.prefetch_related("options").order_by("id")
+
+    context = {
+        "nav_items": _nav_for(request, "Manage quizzes"),
+        "quiz": quiz,
+        "questions": questions,
+        "question_form": question_form,
+        "option_form": option_form,
+    }
+    return render(request, "campus/quiz_manage_detail.html", context)
+
 
 @login_required
 def quiz_list(request):

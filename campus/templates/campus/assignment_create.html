@@ -1,0 +1,51 @@
+{% extends "campus/base.html" %}
+{% block title %}Create assignment — CodeLearn{% endblock %}
+{% block page_title %}Create an assignment{% endblock %}
+{% block page_subtitle %}<p>You'll add test cases on the next screen</p>{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 640px;">
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <label class="field-label" for="id_topic">Topic</label>
+    <select name="topic" id="id_topic" class="field-input">
+      {% for t in form.fields.topic.queryset %}
+        <option value="{{ t.id }}">{{ t.course.title }} — {{ t.name }}</option>
+      {% endfor %}
+    </select>
+    {% if not form.fields.topic.queryset %}
+      <p style="color: var(--text-muted); font-size: 12.5px; margin-top:-10px;">You don't have any topics yet — create a course and a topic first.</p>
+    {% endif %}
+
+    <label class="field-label" for="id_title">Title</label>
+    <input class="field-input" type="text" name="title" id="id_title" required>
+
+    <label class="field-label" for="id_description">Description</label>
+    <textarea class="field-input" name="description" id="id_description" rows="3" required></textarea>
+
+    <label class="field-label" for="id_instructions">Instructions (optional)</label>
+    <textarea class="field-input" name="instructions" id="id_instructions" rows="2"></textarea>
+
+    <div class="grid grid-2" style="gap: 12px;">
+      <div>
+        <label class="field-label" for="id_programming_language">Language</label>
+        <select name="programming_language" id="id_programming_language" class="field-input">
+          {% for value, label in form.fields.programming_language.choices %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="field-label" for="id_max_marks">Max marks</label>
+        <input class="field-input" type="number" min="1" name="max_marks" id="id_max_marks" value="100">
+      </div>
+    </div>
+
+    <label class="field-label" for="id_deadline">Deadline</label>
+    <input class="field-input" type="datetime-local" name="deadline" id="id_deadline" required>
+
+    <button type="submit" class="btn btn-primary" style="margin-top: 8px;">Create assignment &amp; add test cases</button>
+  </form>
+</div>
+{% endblock %}

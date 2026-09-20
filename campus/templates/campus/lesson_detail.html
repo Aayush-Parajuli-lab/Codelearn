@@ -1,0 +1,19 @@
+{% extends "campus/base.html" %}
+{% block title %}{{ lesson.title }} — CodeLearn{% endblock %}
+{% block page_title %}{{ lesson.title }}{% endblock %}
+{% block page_subtitle %}<p>{{ lesson.topic.course.title }} &middot; {{ lesson.topic.name }}</p>{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 760px;">
+  <div style="white-space: pre-wrap; line-height: 1.6;">{{ lesson.content }}</div>
+
+  {% if lesson.example_code %}
+  <div class="section-title" style="margin-top: 20px;">Example</div>
+  <pre class="font-mono" style="background: var(--paper-dim); padding: 12px 14px; border-radius: var(--radius); overflow-x: auto; font-size: 13px;">{{ lesson.example_code }}</pre>
+  {% endif %}
+</div>
+
+<div style="margin-top: 16px;">
+  <a href="{% url 'topic_lessons' lesson.topic_id %}" class="btn btn-outline">&larr; Back to {{ lesson.topic.name }}</a>
+</div>
+{% endblock %}
